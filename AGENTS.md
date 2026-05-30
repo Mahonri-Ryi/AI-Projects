@@ -15,3 +15,4 @@ When projects are added, document install, lint, test, build, and dev commands h
 - **Lint / test / build / run**: Not applicable until code and scripts are added. Do not invent commands; follow whatever the repo adds (Makefile, `package.json` scripts, CI config, etc.).
 - **Toolchain on the VM**: Git, Node.js (via the environment), Python 3.12, and `make` are available for future projects; install project-specific runtimes (e.g. via `.tool-versions`, `mise`, or `nvm`) when the repo defines them.
 - **Git**: Default branch is `main`; remote is `origin` on GitHub (`Mahonri-Ryi/AI-Projects`).
+- **Pull requests**: Use branch prefix `cursor/`. PRs from `cursor/*` auto-merge after CI when setup in [docs/AUTO_MERGE.md](docs/AUTO_MERGE.md).

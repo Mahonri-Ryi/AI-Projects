@@ -1,0 +1,36 @@
+# Enables GitHub auto-merge for Cloud Agent PRs on branches matching cursor/*
+# Requires: repo Settings → Pull requests → Allow auto-merge (see docs/AUTO_MERGE.md)
+
+name: Auto-merge agent PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    name: Enable auto-merge
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'cursor/')
+    steps:
+      - name: Enable auto-merge (squash)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # Mark ready if still draft (agent PRs are often opened as draft)
+          if [ "${{ github.event.pull_request.draft }}" = "true" ]; then
+            gh pr ready "$PR_NUMBER"
+          fi
+          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
