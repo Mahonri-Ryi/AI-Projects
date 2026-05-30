@@ -4,3 +4,4 @@ config/mtga-account.env
 # Play session logs and screenshots
 data/sessions/*.jsonl
 data/sessions/*.png
+__pycache__/
