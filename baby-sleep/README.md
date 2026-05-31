@@ -28,7 +28,9 @@ npm run preview  # preview production build locally
 
 Pushes to `main` that touch `baby-sleep/` deploy via `.github/workflows/deploy-baby-sleep.yml`.
 
-Live URL (after merge): `https://mahonri-ryi.github.io/AI-Projects/baby-sleep/`
+Live URL: **https://mahonri-ryi.github.io/AI-Projects/baby-sleep/**
+
+**Getting a 404?** GitHub Pages must be enabled once — see [DEPLOY.md](./DEPLOY.md).
 
 ## Not medical advice
 
