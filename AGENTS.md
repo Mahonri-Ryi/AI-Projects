@@ -4,10 +4,13 @@ Guidance for AI agents working in this repository.
 
 ## Repository status
 
-This repo is intentionally minimal. Add projects as top-level directories (or separate repos) with their own README, dependencies, and tests.
+| Path | Stack | Commands (from project dir) |
+|------|-------|------------------------------|
+| `baby-sleep/` | Vite, React, TypeScript, PWA | `npm ci`, `npm run dev`, `npm run build`, `npm run lint` |
 
 ## Cursor Cloud
 
-- **Update script**: No dependencies until a project adds a manifest (`package.json`, `pyproject.toml`, etc.).
-- **Services**: None defined in this repo.
+- **Update script**: Run `npm ci` in `baby-sleep/` when that project changes.
+- **Services**: `npm run dev` in `baby-sleep/` (port 5173) for local dev.
+- **Deploy**: GitHub Actions workflow `.github/workflows/deploy-baby-sleep.yml` publishes `baby-sleep/dist` to GitHub Pages at `/AI-Projects/baby-sleep/`.
 - **Git**: Default branch is `main`; remote is `origin` on GitHub (`Mahonri-Ryi/AI-Projects`).
