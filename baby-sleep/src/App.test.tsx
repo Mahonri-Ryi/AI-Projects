@@ -41,7 +41,8 @@ describe('App', () => {
   it('renders dashboard and navigation', () => {
     render(<App />)
     expect(screen.getByText('Little Dream')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /dashboard/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /home/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /coach/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /insights/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument()
   })

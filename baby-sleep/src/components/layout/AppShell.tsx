@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import type { ChildProfile } from '../../types'
-import { IconBook, IconChart, IconHome, IconList, IconSettings } from '../icons'
+import { IconBook, IconChart, IconChat, IconHome, IconList, IconSettings } from '../icons'
 import { ChildSwitcher } from '../ChildSwitcher'
 import { ThemeToggle } from '../ThemeToggle'
 
-export type AppTab = 'home' | 'insights' | 'history' | 'guide' | 'settings'
+export type AppTab = 'home' | 'insights' | 'coach' | 'history' | 'guide' | 'settings'
 
 interface AppShellProps {
   tab: AppTab
@@ -21,8 +21,9 @@ interface AppShellProps {
 }
 
 const NAV: { id: AppTab; label: string; Icon: typeof IconHome }[] = [
-  { id: 'home', label: 'Dashboard', Icon: IconHome },
+  { id: 'home', label: 'Home', Icon: IconHome },
   { id: 'insights', label: 'Insights', Icon: IconChart },
+  { id: 'coach', label: 'Coach', Icon: IconChat },
   { id: 'history', label: 'History', Icon: IconList },
   { id: 'guide', label: 'Guide', Icon: IconBook },
   { id: 'settings', label: 'Settings', Icon: IconSettings },

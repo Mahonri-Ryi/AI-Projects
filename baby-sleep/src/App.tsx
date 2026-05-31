@@ -35,6 +35,7 @@ import { WindDownChecklistCard } from './components/WindDownChecklistCard'
 import { NapTransitionCard } from './components/NapTransitionCard'
 import { WakeFeedingPrompt } from './components/WakeFeedingPrompt'
 import { AndroidShortcutsCard } from './components/AndroidShortcutsCard'
+import { SleepCoachTab } from './components/SleepCoachTab'
 import { getSources, SOURCES_TOTAL_SLEEP } from './data/researchCatalog'
 
 function App() {
@@ -247,6 +248,16 @@ function App() {
               />
               <InsightsDashboard sessions={childSessions} guidance={guidance} now={now} />
             </>
+          )}
+
+          {tab === 'coach' && (
+            <SleepCoachTab
+              activeChild={activeChild}
+              childSessions={childSessions}
+              childMarkers={childMarkers}
+              guidance={guidance}
+              now={now}
+            />
           )}
 
           {tab === 'history' && (

@@ -13,6 +13,20 @@ export default defineConfig({
   define: {
     __APP_BUILD_ID__: JSON.stringify(buildId),
   },
+  server: {
+    proxy: {
+      '/api/coach': {
+        target: 'https://api.openai.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/coach/, ''),
+      },
+      '/api/cursor': {
+        target: 'https://api.cursor.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/cursor/, ''),
+      },
+    },
+  },
   plugins: [
     react(),
     writeVersionJsonPlugin(buildId),
