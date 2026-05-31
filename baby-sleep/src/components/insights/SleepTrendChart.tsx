@@ -57,6 +57,7 @@ export function SleepTrendChart({ data, targetMinHours, targetMaxHours }: Props)
               border: '1px solid var(--border)',
               borderRadius: 10,
               fontSize: 13,
+              color: 'var(--text)',
             }}
             formatter={(value, name) => {
               const labels: Record<string, string> = {
@@ -140,6 +141,7 @@ export function NapNightStackChart({ data }: { data: DaySleepSummary[] }) {
               border: '1px solid var(--border)',
               borderRadius: 10,
               fontSize: 13,
+              color: 'var(--text)',
             }}
           />
           <Area

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { ChildProfile } from '../../types'
 import { IconBook, IconChart, IconHome, IconList, IconSettings } from '../icons'
 import { ChildSwitcher } from '../ChildSwitcher'
+import { ThemeToggle } from '../ThemeToggle'
 
 export type AppTab = 'home' | 'insights' | 'history' | 'guide' | 'settings'
 
@@ -15,6 +16,8 @@ interface AppShellProps {
   ageLabel: string | null
   statusPill?: { label: string; variant: 'awake' | 'asleep' }
   contentChildren: ReactNode
+  isDark: boolean
+  onThemeQuickToggle: () => void
 }
 
 const NAV: { id: AppTab; label: string; Icon: typeof IconHome }[] = [
@@ -35,6 +38,8 @@ export function AppShell({
   ageLabel,
   statusPill,
   contentChildren,
+  isDark,
+  onThemeQuickToggle,
 }: AppShellProps) {
   const activeChild = children.find((c) => c.id === activeChildId)
 
@@ -53,12 +58,15 @@ export function AppShell({
             </p>
           </div>
         </div>
-        {statusPill && (
-          <span className={`status-pill status-pill--${statusPill.variant}`}>
-            <span className="status-pill__dot" />
-            {statusPill.label}
-          </span>
-        )}
+        <div className="top-bar__actions">
+          <ThemeToggle isDark={isDark} onToggle={onThemeQuickToggle} />
+          {statusPill && (
+            <span className={`status-pill status-pill--${statusPill.variant}`}>
+              <span className="status-pill__dot" />
+              {statusPill.label}
+            </span>
+          )}
+        </div>
       </header>
 
       {children.length > 0 && (
