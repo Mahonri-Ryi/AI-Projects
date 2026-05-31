@@ -98,6 +98,13 @@ export async function validateCursorApiKey(
     lastDetail = result.detail
   }
 
+  if (lastStatus === 404) {
+    return {
+      ok: false,
+      message:
+        'Proxy returned 404. Use full URL with https:// (e.g. https://little-dream-coach.NAME.workers.dev) — not just the hostname.',
+    }
+  }
   if (lastStatus === 401) {
     return {
       ok: false,

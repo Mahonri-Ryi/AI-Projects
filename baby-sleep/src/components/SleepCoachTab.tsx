@@ -140,9 +140,13 @@ export function SleepCoachTab({
                 type="url"
                 value={coach.settings.proxyBaseUrl}
                 onChange={(e) => coach.updateSettings({ proxyBaseUrl: e.target.value })}
-                placeholder="https://your-worker.workers.dev"
+                onBlur={(e) =>
+                  coach.updateSettings({ proxyBaseUrl: e.target.value.trim() })
+                }
+                placeholder="https://little-dream-coach.NAME.workers.dev"
               />
             </label>
+            <p className="coach-hint">Must start with <strong>https://</strong> (not just the hostname).</p>
             <p className="coach-hint">
               {import.meta.env.DEV
                 ? `Dev: Cursor calls go through ${cursorProxy || '/api/cursor'} — proxy optional.`

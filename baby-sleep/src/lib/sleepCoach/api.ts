@@ -1,4 +1,5 @@
 import { sendCursorCoachChat } from './cursorCoach'
+import { normalizeProxyBaseUrl } from './proxyUrl'
 import type { CoachMessage, CoachProvider, SleepCoachSettings } from './types'
 
 export interface CoachChatRequest {
@@ -31,8 +32,8 @@ export class CoachApiError extends Error {
 }
 
 export function resolveCoachApiBase(settings: SleepCoachSettings): string {
-  const custom = settings.proxyBaseUrl.trim()
-  if (custom) return custom.replace(/\/$/, '')
+  const custom = normalizeProxyBaseUrl(settings.proxyBaseUrl)
+  if (custom) return custom
 
   const envProxy = import.meta.env.VITE_SLEEP_COACH_PROXY as string | undefined
   if (envProxy?.trim()) return envProxy.trim().replace(/\/$/, '')
