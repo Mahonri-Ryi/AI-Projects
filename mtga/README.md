@@ -6,27 +6,41 @@ Tools and knowledge for an agent to play MTG Arena on the cloud desktop, improve
 
 See [docs/MTGA_CONTROLS.md](../docs/MTGA_CONTROLS.md). **Cards are played by click-and-drag to the battlefield.**
 
-## Layout
+## Knowledge base (read first)
+
+| Doc | Topic |
+|-----|--------|
+| [knowledge/LEARNING_CURRICULUM.md](knowledge/LEARNING_CURRICULUM.md) | Reading order, official links, YouTube study list |
+| [knowledge/HOW_TO_PLAY.md](knowledge/HOW_TO_PLAY.md) | Goals, turns, combat, casting |
+| [knowledge/MANA_AND_LANDS.md](knowledge/MANA_AND_LANDS.md) | Five colors, basic lands, mana costs |
+| [knowledge/CARD_TYPES.md](knowledge/CARD_TYPES.md) | Creature, instant, sorcery, etc. |
+| [knowledge/FIVE_COLORS.md](knowledge/FIVE_COLORS.md) | Color pie and play styles |
+| [knowledge/BEGINNER_RULES.md](knowledge/BEGINNER_RULES.md) | Automation cheat sheet |
+
+## Code layout
 
 | Path | Purpose |
 |------|---------|
-| `actions.py` | Screen actions: drag-to-play, end turn, screenshot |
-| `heuristics.py` | Simple tutorial / beginner policy |
-| `session.py` | Episode logging (state → action → outcome) |
-| `knowledge/` | Rules notes and phase reminders |
+| `actions.py` | pyautogui drag, screenshot |
+| `actions_x11.py` | xdotool drag (VM) |
+| `heuristics.py` | Tutorial hints → actions |
+| `session.py` | JSONL episode logging |
+| `run_tutorial_drags.sh` | Batch xdotool tutorial driver |
 
 ## Quick start (VM)
 
 ```bash
-pip install --user pillow mss pyautogui
+pip install --user -r ../requirements-mtga.txt
+sudo apt install -y python3-tk xdotool scrot
 export DISPLAY=:1
-python3 -m mtga.session --screenshot  # test capture
+PYTHONPATH=/workspace python3 -m mtga.session --screenshot
 ```
 
-## Learning loop (planned)
+## Learning loop
 
-1. **Observe** — screenshot + optional OCR later  
-2. **Decide** — heuristics → later policy / model  
-3. **Act** — drag cards, end turn (see `actions.py`)  
-4. **Record** — append to `data/sessions/*.jsonl`  
-5. **Review** — summarize mistakes, update `knowledge/`
+1. **Study** — `knowledge/` docs + videos in LEARNING_CURRICULUM  
+2. **Observe** — screenshot (+ OCR later)  
+3. **Decide** — heuristics / future policy  
+4. **Act** — drag to play; end turn  
+5. **Record** — `data/sessions/*.jsonl`  
+6. **Review** — update knowledge from mistakes  
