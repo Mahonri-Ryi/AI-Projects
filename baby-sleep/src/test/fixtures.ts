@@ -60,6 +60,9 @@ export function makeAppState(overrides?: Partial<AppState>): AppState {
     activeChildId: CHILD_A.id,
     sessions: makeSampleSessions(CHILD_A.id),
     householdCode: '',
+    onboardingComplete: true,
+    dayMarkers: [],
+    syncMeta: { lastSyncedAt: null, lastSyncLabel: null, mergeCount: 0 },
     ...overrides,
   }
 }

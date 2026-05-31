@@ -23,6 +23,7 @@ import {
   typicalNapDurationMinutes,
 } from '../data/sleepScience'
 import type {
+  ChildRoutine,
   NextBedtimePrediction,
   NextNapPrediction,
   SleepSession,
@@ -125,6 +126,7 @@ export function predictNextNap(
   birthDate: string,
   sessions: SleepSession[],
   now = new Date(),
+  routine?: ChildRoutine,
 ): NextNapPrediction | null {
   const status = getSleepStatus(sessions)
   const guidance = getWakeWindowGuidance(birthDate, now)
@@ -137,10 +139,12 @@ export function predictNextNap(
     return null
   }
 
+  const baseTarget = routine?.customWakeTargetMinutes ?? guidance.targetMinutes
+
   const { minutes: targetWake, note, usedShortNapSources } = adjustedWakeMinutes(
     birthDate,
     sessions,
-    guidance.targetMinutes,
+    baseTarget,
     now,
   )
 
@@ -204,6 +208,7 @@ export function predictNextBedtime(
   birthDate: string,
   sessions: SleepSession[],
   now = new Date(),
+  routine?: ChildRoutine,
 ): NextBedtimePrediction | null {
   const status = getSleepStatus(sessions)
   const guidance = getBedtimeGuidance(birthDate, now)
@@ -223,6 +228,11 @@ export function predictNextBedtime(
   if (learnedMedian !== null) {
     targetMinutes = Math.round(guidance.typicalStartMinutes * 0.35 + learnedMedian * 0.65)
     learnedFromHistory = true
+  }
+
+  if (routine?.preferredBedtimeMinutes != null) {
+    targetMinutes = routine.preferredBedtimeMinutes
+    learnedFromHistory = false
   }
 
   let sweetSpot = dateAtMinutesFromMidnight(now, targetMinutes)

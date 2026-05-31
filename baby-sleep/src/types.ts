@@ -1,10 +1,37 @@
 export type SleepKind = 'nap' | 'night'
 
+export type DayMarkerTag =
+  | 'regression-4mo'
+  | 'regression-8mo'
+  | 'regression-12mo'
+  | 'teething'
+  | 'sick'
+  | 'travel'
+  | 'custom'
+
+export const DAY_MARKER_LABELS: Record<DayMarkerTag, string> = {
+  'regression-4mo': '4-month regression',
+  'regression-8mo': '8–10 month regression',
+  'regression-12mo': '12-month regression',
+  teething: 'Teething',
+  sick: 'Sick / unwell',
+  travel: 'Travel / time zone',
+  custom: 'Custom note',
+}
+
+export interface ChildRoutine {
+  /** Override age-based target wake window (minutes). */
+  customWakeTargetMinutes?: number
+  /** Preferred bedtime as minutes from local midnight (e.g. 19:30 → 1170). */
+  preferredBedtimeMinutes?: number
+}
+
 export interface ChildProfile {
   id: string
   name: string
   birthDate: string // YYYY-MM-DD
   color: string // hex accent for UI
+  routine?: ChildRoutine
 }
 
 export interface SleepSession {
@@ -13,6 +40,20 @@ export interface SleepSession {
   kind: SleepKind
   start: string // ISO
   end: string | null
+}
+
+export interface DayMarker {
+  id: string
+  childId: string
+  date: string // yyyy-MM-dd
+  tag: DayMarkerTag
+  note?: string
+}
+
+export interface SyncMeta {
+  lastSyncedAt: string | null
+  lastSyncLabel: string | null
+  mergeCount: number
 }
 
 /** @deprecated Legacy single-child profile — migrated to ChildProfile */
@@ -28,6 +69,9 @@ export interface AppState {
   sessions: SleepSession[]
   householdCode: string
   reminders?: ReminderSettings
+  dayMarkers?: DayMarker[]
+  syncMeta?: SyncMeta
+  onboardingComplete?: boolean
 }
 
 export interface ScienceSource {
@@ -62,7 +106,7 @@ export interface NextNapPrediction {
 
 export interface BedtimeGuidance {
   ageLabel: string
-  typicalStartMinutes: number // minutes from local midnight
+  typicalStartMinutes: number
   windowStartMinutes: number
   windowEndMinutes: number
   lastStretchWakeMinutes: number
@@ -101,4 +145,26 @@ export interface SleepStatus {
   lastEndedSession: SleepSession | null
   awakeSince: Date | null
   asleepSince: Date | null
+}
+
+export interface GlanceSummary {
+  headline: string
+  subline: string
+  kind: 'asleep' | 'nap-soon' | 'bed-soon' | 'awake' | 'profile'
+}
+
+export interface SleepHint {
+  id: string
+  severity: 'info' | 'watch' | 'action'
+  title: string
+  body: string
+}
+
+export interface WeeklyReport {
+  periodLabel: string
+  avgTotalHours: number
+  avgNapCount: number
+  avgBedtime: string | null
+  bedtimeDriftMinutes: number | null
+  highlights: string[]
 }

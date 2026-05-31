@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import type { SleepSession } from '../types'
 import { formatDuration } from '../lib/sleepLogic'
 import { Card } from './ui/Card'
+import { SessionEditor } from './SessionEditor'
 
 interface Props {
   sessions: SleepSession[]
+  onUpdate: (id: string, patch: Partial<Pick<SleepSession, 'kind' | 'start' | 'end'>>) => void
   onDelete: (id: string) => void
 }
 
@@ -15,7 +18,23 @@ function sessionMinutes(s: SleepSession): number | null {
   )
 }
 
-export function SleepLog({ sessions, onDelete }: Props) {
+export function SleepLog({ sessions, onUpdate, onDelete }: Props) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const editing = editingId ? sessions.find((s) => s.id === editingId) : null
+
+  if (editing) {
+    return (
+      <SessionEditor
+        session={editing}
+        onSave={(patch) => {
+          onUpdate(editing.id, patch)
+          setEditingId(null)
+        }}
+        onCancel={() => setEditingId(null)}
+      />
+    )
+  }
+
   if (sessions.length === 0) {
     return (
       <Card title="Sleep history" subtitle="All logged sessions">
@@ -25,7 +44,7 @@ export function SleepLog({ sessions, onDelete }: Props) {
   }
 
   return (
-    <Card title="Sleep history" subtitle={`${sessions.length} recent sessions`}>
+    <Card title="Sleep history" subtitle={`${sessions.length} recent sessions · tap Edit to fix times`}>
       <ul className="log-table">
         {sessions.map((s) => {
           const dur = sessionMinutes(s)
@@ -41,10 +60,17 @@ export function SleepLog({ sessions, onDelete }: Props) {
                   {s.end ? ` – ${format(parseISO(s.end), 'h:mm a')}` : ' · in progress'}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 {dur !== null && (
                   <span style={{ fontWeight: 700, fontSize: '1rem' }}>{formatDuration(dur)}</span>
                 )}
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--compact"
+                  onClick={() => setEditingId(s.id)}
+                >
+                  Edit
+                </button>
                 <button
                   type="button"
                   className="btn-icon"
