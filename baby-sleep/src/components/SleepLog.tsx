@@ -1,6 +1,7 @@
 import { format, parseISO } from 'date-fns'
 import type { SleepSession } from '../types'
 import { formatDuration } from '../lib/sleepLogic'
+import { Card } from './ui/Card'
 
 interface Props {
   sessions: SleepSession[]
@@ -17,52 +18,46 @@ function sessionMinutes(s: SleepSession): number | null {
 export function SleepLog({ sessions, onDelete }: Props) {
   if (sessions.length === 0) {
     return (
-      <section className="card">
-        <h2>Recent sleep</h2>
-        <p style={{ color: 'var(--text-muted)', margin: 0 }}>No sessions logged yet.</p>
-      </section>
+      <Card title="Sleep history" subtitle="All logged sessions">
+        <p className="prose">No sessions yet. Log naps and bedtime from the Dashboard.</p>
+      </Card>
     )
   }
 
   return (
-    <section className="card">
-      <h2>Recent sleep</h2>
-      <ul className="log-list">
+    <Card title="Sleep history" subtitle={`${sessions.length} recent sessions`}>
+      <ul className="log-table">
         {sessions.map((s) => {
           const dur = sessionMinutes(s)
           return (
-            <li key={s.id} className="log-item">
+            <li key={s.id} className="log-row">
               <div>
-                <span className={`badge ${s.kind}`}>{s.kind}</span>
-                <div style={{ fontSize: '0.9rem', marginTop: 4 }}>
-                  {format(parseISO(s.start), 'MMM d · h:mm a')}
-                  {s.end ? ` – ${format(parseISO(s.end), 'h:mm a')}` : ' · ongoing'}
+                <span className={`badge badge--${s.kind}`}>{s.kind}</span>
+                <div style={{ fontSize: '0.9rem', marginTop: 6, fontWeight: 500 }}>
+                  {format(parseISO(s.start), 'EEE, MMM d')}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {format(parseISO(s.start), 'h:mm a')}
+                  {s.end ? ` – ${format(parseISO(s.end), 'h:mm a')}` : ' · in progress'}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {dur !== null && (
-                  <span style={{ fontWeight: 600, color: 'var(--accent-dark)' }}>
-                    {formatDuration(dur)}
-                  </span>
+                  <span style={{ fontWeight: 700, fontSize: '1rem' }}>{formatDuration(dur)}</span>
                 )}
                 <button
                   type="button"
-                  aria-label="Delete"
+                  className="btn-icon"
+                  aria-label="Delete session"
                   onClick={() => onDelete(s.id)}
-                  style={{
-                    background: 'transparent',
-                    color: 'var(--text-muted)',
-                    padding: '0.25rem 0.5rem',
-                    fontSize: '0.75rem',
-                  }}
                 >
-                  ✕
+                  Remove
                 </button>
               </div>
             </li>
           )
         })}
       </ul>
-    </section>
+    </Card>
   )
 }

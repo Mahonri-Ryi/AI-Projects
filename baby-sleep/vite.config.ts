@@ -13,9 +13,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Little Dream — Baby Sleep Tracker',
+        name: 'Little Dream — Baby Sleep Intelligence',
         short_name: 'Little Dream',
-        description: 'Track naps and get research-based next-nap guidance',
+        description: 'Professional baby sleep tracking, patterns, and nap guidance',
         theme_color: '#6b5b95',
         background_color: '#faf8f5',
         display: 'standalone',

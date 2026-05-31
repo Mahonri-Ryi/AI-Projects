@@ -1,5 +1,6 @@
 import { differenceInMinutes, format } from 'date-fns'
 import type { NextNapPrediction, WakeWindowGuidance, SleepStatus } from '../types'
+import { Card } from './ui/Card'
 
 interface Props {
   prediction: NextNapPrediction | null
@@ -18,24 +19,19 @@ export function NextNapCard({
 }: Props) {
   if (status.isAsleep) {
     return (
-      <section className="card next-nap">
-        <h2>Resting</h2>
-        <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-          When {status.currentSession?.kind === 'night' ? 'morning' : 'baby'} wakes, we&apos;ll
-          calculate the next nap window from age-based wake times.
+      <Card title="Next nap" subtitle="We'll calculate timing when baby wakes">
+        <p className="prose">
+          Rest periods are excluded from wake-window math. Tap <strong>Wake up</strong> when ready.
         </p>
-      </section>
+      </Card>
     )
   }
 
   if (!prediction || !guidance) {
     return (
-      <section className="card next-nap">
-        <h2>Next nap</h2>
-        <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-          Add birth date in Settings to get research-based nap timing.
-        </p>
-      </section>
+      <Card title="Next nap" subtitle="Personalized scheduling">
+        <p className="prose">Add your baby&apos;s birth date in Settings to unlock age-based nap windows.</p>
+      </Card>
     )
   }
 
@@ -47,73 +43,77 @@ export function NextNapCard({
   let countdownText = ''
 
   if (minsToSweet > 5) {
-    countdownText = `Sweet spot in ~${minsToSweet} min`
+    countdownText = `Optimal wind-down in ~${minsToSweet} min`
   } else if (minsToSweet > -15) {
     countdownClass = 'soon'
     countdownText =
       minsToSweet >= 0
-        ? 'Sweet spot — good time to start wind-down'
-        : 'In the nap window now'
+        ? 'Optimal window — begin wind-down now'
+        : 'Within recommended nap window'
   } else if (minsToWindowEnd > 0) {
     countdownClass = 'soon'
-    countdownText = 'Still in typical window — watch sleepy cues'
+    countdownText = 'Extended wake window — watch sleepy cues'
   } else {
     countdownClass = 'overdue'
-    countdownText = 'Past typical window — baby may be overtired; offer nap soon'
+    countdownText = 'Past typical window — prioritize nap soon'
   }
 
   return (
-    <section className="card next-nap">
-      <h2>Next nap</h2>
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 0.5rem' }}>
-        {guidance.ageLabel} · wake window {guidance.label}
+    <Card
+      title="Next nap"
+      subtitle={`${guidance.ageLabel} · ${guidance.label} wake window`}
+    >
+      <div className={`next-nap__countdown ${countdownClass}`}>{countdownText}</div>
+      <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+        Awake {awakeMinutes}m · target ~{prediction.targetWakeMinutes}m
       </p>
 
-      <div className={`countdown ${countdownClass}`}>{countdownText}</div>
-      <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-        Awake {awakeMinutes} min · target ~{prediction.targetWakeMinutes} min
-      </p>
-
-      <div className="sweet-spot">
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Ideal wind-down</span>
-        <br />
-        <strong>{format(prediction.sweetSpot, 'h:mm a')}</strong>
+      <div className="next-nap__sweet">
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+          RECOMMENDED WIND-DOWN
+        </span>
+        <time>{format(prediction.sweetSpot, 'h:mm a')}</time>
       </div>
 
-      <div className="window">
-        <div className="window-block">
+      <div className="next-nap__windows">
+        <div className="next-nap__window">
           <span>Earliest</span>
           <strong>{format(prediction.windowStart, 'h:mm a')}</strong>
         </div>
-        <div className="window-block">
+        <div className="next-nap__window">
           <span>Latest</span>
           <strong>{format(prediction.windowEnd, 'h:mm a')}</strong>
         </div>
       </div>
 
       {minsToWindowStart > 0 && (
-        <p style={{ fontSize: '0.8rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <p style={{ fontSize: '0.8rem', textAlign: 'center', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
           Window opens in ~{minsToWindowStart} min
         </p>
       )}
 
       {prediction.adjustmentNote && (
-        <p style={{ fontSize: '0.85rem', background: 'var(--warning-soft)', padding: '0.65rem', borderRadius: 8 }}>
+        <p
+          style={{
+            fontSize: '0.85rem',
+            marginTop: '1rem',
+            padding: '0.75rem',
+            background: 'var(--warning-soft)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--text-secondary)',
+          }}
+        >
           {prediction.adjustmentNote}
         </p>
       )}
 
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-        {prediction.explanation}
-      </p>
-
-      <div className="cues">
+      <div className="cue-pills">
         {guidance.sleepyCues.map((c) => (
           <span key={c} className="cue-pill">
             {c}
           </span>
         ))}
       </div>
-    </section>
+    </Card>
   )
 }

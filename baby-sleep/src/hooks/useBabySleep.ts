@@ -115,8 +115,10 @@ export function useBabySleep() {
   const recentSessions = useMemo(() => {
     return [...state.sessions]
       .sort((a, b) => parseISO(b.start).getTime() - parseISO(a.start).getTime())
-      .slice(0, 14)
+      .slice(0, 30)
   }, [state.sessions])
+
+  const allSessions = state.sessions
 
   return {
     state,
@@ -134,6 +136,7 @@ export function useBabySleep() {
     deleteSession,
     replaceState,
     recentSessions,
+    allSessions,
     now,
   }
 }

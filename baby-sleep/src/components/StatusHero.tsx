@@ -1,38 +1,36 @@
+import { IconMoon, IconSun } from './icons'
 import type { SleepStatus } from '../types'
 
 interface Props {
   status: SleepStatus
-  name: string
   awakeMinutes: number
   asleepMinutes: number
   formatDuration: (m: number) => string
 }
 
-export function StatusHero({
-  status,
-  name,
-  awakeMinutes,
-  asleepMinutes,
-  formatDuration,
-}: Props) {
-  const label = status.isAsleep
+export function StatusHero({ status, awakeMinutes, asleepMinutes, formatDuration }: Props) {
+  const isAsleep = status.isAsleep
+  const label = isAsleep
     ? status.currentSession?.kind === 'night'
       ? 'Night sleep'
       : 'Napping'
     : 'Awake'
 
-  const minutes = status.isAsleep ? asleepMinutes : awakeMinutes
-  const note = status.isAsleep
-    ? `Started ${status.asleepSince?.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  const minutes = isAsleep ? asleepMinutes : awakeMinutes
+  const note = isAsleep
+    ? `Since ${status.asleepSince?.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
     : status.awakeSince
-      ? `Woke ${status.awakeSince.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-      : 'Log sleep to start tracking'
+      ? `Since ${status.awakeSince.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+      : 'Start a session to begin tracking'
 
   return (
-    <section className="card hero">
-      <div className="status-label">{name} · {label}</div>
-      <div className="timer">{formatDuration(minutes)}</div>
-      <div className="timer-note">{note}</div>
-    </section>
+    <div className="status-hero">
+      <div className="status-hero__label">
+        {isAsleep ? <IconMoon size={14} /> : <IconSun size={14} />}
+        <span style={{ marginLeft: 6 }}>{label}</span>
+      </div>
+      <div className="status-hero__timer">{formatDuration(minutes)}</div>
+      <p className="status-hero__note">{note}</p>
+    </div>
   )
 }
