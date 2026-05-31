@@ -3,7 +3,8 @@ import { format, parseISO } from 'date-fns'
 import { FEEDING_TAG_LABELS, type FeedingTag, type SleepSession } from '../types'
 import { formatDuration } from '../lib/sleepLogic'
 import { Card } from './ui/Card'
-import { buildManualSessionDraft, SessionEditor } from './SessionEditor'
+import { buildManualSessionDraft } from '../lib/sessionDraft'
+import { SessionEditor } from './SessionEditor'
 
 const CREATE_ID = '__create__'
 

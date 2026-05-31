@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildManualSessionDraft } from './SessionEditor'
+import { buildManualSessionDraft } from '../lib/sessionDraft'
 
 describe('buildManualSessionDraft', () => {
   it('defaults to a completed nap with end after start', () => {
