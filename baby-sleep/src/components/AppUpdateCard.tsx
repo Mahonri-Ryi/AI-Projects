@@ -3,18 +3,24 @@ import { Card } from './ui/Card'
 
 interface Props {
   needRefresh: boolean
+  remoteBuildLabel: string | null
   checking: boolean
+  cacheRefreshing: boolean
   checkMessage: string | null
   onCheck: () => void
   onApplyUpdate: () => void
+  onClearCache: () => void
 }
 
 export function AppUpdateCard({
   needRefresh,
+  remoteBuildLabel,
   checking,
+  cacheRefreshing,
   checkMessage,
   onCheck,
   onApplyUpdate,
+  onClearCache,
 }: Props) {
   const buildId = getBuildId()
   const buildLabel = formatBuildLabel(buildId)
@@ -25,7 +31,10 @@ export function AppUpdateCard({
         <strong>{buildLabel}</strong>
         {isProductionBuild(buildId) && (
           <span style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Compare this label after a release — a new short code means an update reached your device.
+            This device is running build <code>{buildId.slice(0, 7)}</code>.
+            {remoteBuildLabel && remoteBuildLabel !== buildLabel && (
+              <> A newer build ({remoteBuildLabel}) is on the server.</>
+            )}
           </span>
         )}
       </p>
@@ -33,16 +42,27 @@ export function AppUpdateCard({
       {needRefresh ? (
         <div className="update-banner update-banner--ready" role="status">
           <p>
-            <strong>Update available.</strong> Refresh to get the latest features and fixes.
+            <strong>Update available.</strong>
+            {remoteBuildLabel ? ` ${remoteBuildLabel} is ready.` : ' Refresh to get the latest features.'}
           </p>
-          <button type="button" className="btn btn--primary" onClick={onApplyUpdate}>
-            Refresh app
-          </button>
+          <div className="update-actions">
+            <button type="button" className="btn btn--primary" onClick={onApplyUpdate}>
+              Refresh app
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              disabled={cacheRefreshing}
+              onClick={onClearCache}
+            >
+              {cacheRefreshing ? 'Resetting…' : 'Clear cache & reload'}
+            </button>
+          </div>
         </div>
       ) : (
         <p className="prose" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-          Little Dream checks for updates when you open the app. If a new version is published, you&apos;ll
-          see a notice here.
+          Little Dream checks for updates when you open the app. Your sleep logs are kept on this
+          phone — clearing cache does not delete them.
         </p>
       )}
 
@@ -55,6 +75,16 @@ export function AppUpdateCard({
         >
           {checking ? 'Checking…' : 'Check for updates'}
         </button>
+        {!needRefresh && (
+          <button
+            type="button"
+            className="btn btn--ghost"
+            disabled={cacheRefreshing}
+            onClick={onClearCache}
+          >
+            {cacheRefreshing ? 'Resetting…' : 'Clear cache & reload'}
+          </button>
+        )}
       </div>
 
       {checkMessage && (
@@ -70,11 +100,20 @@ export function AppUpdateCard({
       )}
 
       <details className="update-help">
-        <summary>Still on an old version?</summary>
+        <summary>Stuck on an old version?</summary>
         <ul>
-          <li>Force-close the app (swipe it away), then open it again.</li>
-          <li>On iPhone: open Little Dream in Safari once, then return to the home-screen icon.</li>
-          <li>As a last resort: remove the home-screen icon and add the site to your home screen again.</li>
+          <li>
+            Tap <strong>Clear cache & reload</strong> — this fixes most stale installs and{' '}
+            <strong>keeps your sleep data</strong> (unlike deleting the app).
+          </li>
+          <li>Force-close the app, then open it again while online.</li>
+          <li>
+            Compare the build code above with a fresh open in Safari:{' '}
+            <a href="https://mahonri-ryi.github.io/AI-Projects/baby-sleep/" target="_blank" rel="noopener noreferrer">
+              mahonri-ryi.github.io/AI-Projects/baby-sleep/
+            </a>
+          </li>
+          <li>Only if needed: remove the home-screen icon and add it again (data is preserved in Safari).</li>
         </ul>
       </details>
     </Card>

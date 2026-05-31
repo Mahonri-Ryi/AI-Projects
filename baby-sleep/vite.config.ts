@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { writeVersionJsonPlugin } from './plugins/writeVersionJson'
 
 // GitHub Pages: https://<user>.github.io/AI-Projects/baby-sleep/
 const base = process.env.GITHUB_PAGES === 'true' ? '/AI-Projects/baby-sleep/' : '/'
@@ -14,8 +15,9 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    writeVersionJsonPlugin(buildId),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Little Dream — Baby Sleep Intelligence',
@@ -36,7 +38,21 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/version.json'],
         importScripts: ['sw-reminders.js'],
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: /version\.json$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'little-dream-version',
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 },
+            },
+          },
+        ],
       },
     }),
   ],

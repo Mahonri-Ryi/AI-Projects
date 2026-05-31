@@ -94,7 +94,12 @@ function App() {
             </div>
           )}
 
-          {pwa.needRefresh && <UpdateBanner onApplyUpdate={pwa.applyUpdate} />}
+          {pwa.needRefresh && (
+            <UpdateBanner
+              onApplyUpdate={pwa.applyUpdate}
+              onClearCache={pwa.clearCacheAndReload}
+            />
+          )}
 
           {tab === 'home' && (
             <>
@@ -145,10 +150,13 @@ function App() {
             <>
               <AppUpdateCard
                 needRefresh={pwa.needRefresh}
+                remoteBuildLabel={pwa.remoteBuildLabel}
                 checking={pwa.checking}
+                cacheRefreshing={pwa.cacheRefreshing}
                 checkMessage={pwa.checkMessage}
                 onCheck={pwa.checkForUpdate}
                 onApplyUpdate={pwa.applyUpdate}
+                onClearCache={pwa.clearCacheAndReload}
               />
               <ThemeSettings preference={preference} onChange={setTheme} />
               <ReminderSettings settings={reminders} onChange={setReminders} />
