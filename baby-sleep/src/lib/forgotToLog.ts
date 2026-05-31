@@ -1,6 +1,7 @@
 import { differenceInMinutes, format } from 'date-fns'
 import type { SleepSession } from '../types'
 import { getSleepStatus } from './sleepLogic'
+import { formatDurationWords } from './timeDisplay'
 
 export interface ForgotToLogPrompt {
   message: string
@@ -30,6 +31,6 @@ export function getForgotToLogPrompt(
   return {
     awakeMinutes,
     awakeSinceLabel: format(status.awakeSince, 'h:mm a'),
-    message: `Still awake since ${format(status.awakeSince, 'h:mm a')} (${awakeMinutes}m) ${context}. Everything okay?`,
+    message: `Still awake since ${format(status.awakeSince, 'h:mm a')} (${formatDurationWords(awakeMinutes)}) ${context}. Everything okay?`,
   }
 }

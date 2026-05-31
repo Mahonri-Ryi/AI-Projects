@@ -1,5 +1,6 @@
 import { differenceInMinutes, format } from 'date-fns'
 import { getSources, SOURCES_SLEEPY_CUES } from '../data/researchCatalog'
+import { formatDurationWords, formatInUntilWithTime } from '../lib/timeDisplay'
 import type { NextNapPrediction, WakeWindowGuidance, SleepStatus } from '../types'
 import { Card } from './ui/Card'
 import { ResearchLinks } from './ui/ResearchLinks'
@@ -45,7 +46,7 @@ export function NextNapCard({
   let countdownText: string
 
   if (minsToSweet > 5) {
-    countdownText = `Optimal wind-down in ~${minsToSweet} min`
+    countdownText = `Optimal wind-down ${formatInUntilWithTime(minsToSweet, prediction.sweetSpot)}`
   } else if (minsToSweet > -15) {
     countdownClass = 'soon'
     countdownText =
@@ -67,7 +68,7 @@ export function NextNapCard({
     >
       <div className={`next-nap__countdown ${countdownClass}`}>{countdownText}</div>
       <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-        Awake {awakeMinutes}m · target ~{prediction.targetWakeMinutes}m
+        Awake {formatDurationWords(awakeMinutes)} · target ~{formatDurationWords(prediction.targetWakeMinutes)}
       </p>
 
       <div className="next-nap__sweet">
@@ -90,7 +91,7 @@ export function NextNapCard({
 
       {minsToWindowStart > 0 && (
         <p style={{ fontSize: '0.8rem', textAlign: 'center', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-          Window opens in ~{minsToWindowStart} min
+          Window opens {formatInUntilWithTime(minsToWindowStart, prediction.windowStart)}
         </p>
       )}
 
