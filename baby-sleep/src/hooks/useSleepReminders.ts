@@ -2,9 +2,12 @@ import { useEffect, useRef } from 'react'
 import type { NextBedtimePrediction, NextNapPrediction, ReminderSettings } from '../types'
 import {
   buildDueReminders,
+  clearServiceWorkerReminders,
   remindersToFire,
   showSleepReminder,
+  syncRemindersToServiceWorker,
 } from '../lib/reminders'
+import { getNotificationPermission } from '../lib/notificationPermission'
 
 export function useSleepReminders(
   childName: string,
@@ -19,16 +22,25 @@ export function useSleepReminders(
     firedRef.current.clear()
   }, [childName, settings.enabled, settings.napMinutesBefore, settings.bedtimeMinutesBefore])
 
-  useEffect(() => {
-    if (!settings.enabled) return
+  const due = buildDueReminders(childName, nap, bedtime, settings, now)
 
-    const due = buildDueReminders(childName, nap, bedtime, settings, now)
+  useEffect(() => {
+    if (!settings.enabled || getNotificationPermission() !== 'granted') {
+      void clearServiceWorkerReminders()
+      return
+    }
+    void syncRemindersToServiceWorker(due)
+  }, [due, settings.enabled])
+
+  useEffect(() => {
+    if (!settings.enabled || getNotificationPermission() !== 'granted') return
+
     const toFire = remindersToFire(due, now, firedRef.current)
 
     for (const r of toFire) {
       const key = `${r.kind}-${r.fireAt.getTime()}`
       firedRef.current.add(key)
-      showSleepReminder(r.title, r.body, `little-dream-${r.kind}`)
+      void showSleepReminder(r.title, r.body, r.tag)
     }
-  }, [childName, nap, bedtime, settings, now])
+  }, [due, settings.enabled, now])
 }
