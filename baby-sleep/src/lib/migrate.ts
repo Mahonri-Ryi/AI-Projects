@@ -1,4 +1,11 @@
-import type { AppState, ChildProfile, ReminderSettings, SleepSession } from '../types'
+import type {
+  AppState,
+  ChildProfile,
+  DayMarker,
+  ReminderSettings,
+  SleepSession,
+  SyncMeta,
+} from '../types'
 import { DEFAULT_REMINDER_SETTINGS, generateId } from './sleepLogic'
 
 export const CHILD_COLORS = [
@@ -25,6 +32,9 @@ interface LegacyStateV1 {
   children?: ChildProfile[]
   activeChildId?: string
   reminders?: ReminderSettings
+  dayMarkers?: DayMarker[]
+  syncMeta?: SyncMeta
+  onboardingComplete?: boolean
 }
 
 function isV2Payload(parsed: LegacyStateV1): boolean {
@@ -59,7 +69,7 @@ export function normalizeState(raw: unknown): AppState {
         ? parsed.activeChildId
         : children[0].id
 
-    return {
+    return normalizeAppFields({
       version: 2,
       children,
       activeChildId,
@@ -69,7 +79,10 @@ export function normalizeState(raw: unknown): AppState {
       })),
       householdCode: parsed.householdCode ?? '',
       reminders: normalizeReminders(parsed.reminders),
-    }
+      dayMarkers: parsed.dayMarkers,
+      syncMeta: parsed.syncMeta,
+      onboardingComplete: parsed.onboardingComplete,
+    })
   }
 
   const child = createDefaultChild(
@@ -84,13 +97,26 @@ export function normalizeState(raw: unknown): AppState {
     end: s.end,
   }))
 
-  return {
+  return normalizeAppFields({
     version: 2,
     children: [child],
     activeChildId: child.id,
     sessions,
     householdCode: parsed?.householdCode ?? '',
     reminders: normalizeReminders(parsed?.reminders),
+    dayMarkers: parsed?.dayMarkers,
+    syncMeta: parsed?.syncMeta,
+    onboardingComplete: parsed?.onboardingComplete,
+  })
+}
+
+function normalizeAppFields(state: AppState): AppState {
+  return {
+    ...state,
+    dayMarkers: state.dayMarkers ?? [],
+    syncMeta: state.syncMeta ?? { lastSyncedAt: null, lastSyncLabel: null, mergeCount: 0 },
+    onboardingComplete: state.onboardingComplete ?? false,
+    children: state.children,
   }
 }
 

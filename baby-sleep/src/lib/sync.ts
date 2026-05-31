@@ -2,6 +2,14 @@ import LZString from 'lz-string'
 import type { AppState } from '../types'
 import { normalizeState } from './migrate'
 
+export interface SyncPayloadV3 {
+  v: 3
+  children: AppState['children']
+  activeChildId: string
+  sessions: AppState['sessions']
+  dayMarkers?: AppState['dayMarkers']
+}
+
 export interface SyncPayloadV2 {
   v: 2
   children: AppState['children']
@@ -21,11 +29,12 @@ export interface SyncPayloadV1 {
 }
 
 export function encodeSyncLink(state: AppState, baseUrl: string): string {
-  const payload: SyncPayloadV2 = {
-    v: 2,
+  const payload: SyncPayloadV3 = {
+    v: 3,
     children: state.children,
     activeChildId: state.activeChildId,
     sessions: state.sessions.slice(-400),
+    dayMarkers: state.dayMarkers?.slice(-200),
   }
   const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload))
   const url = new URL(baseUrl)
@@ -40,7 +49,11 @@ export function decodeSyncFromUrl(search: string): AppState | null {
   try {
     const json = LZString.decompressFromEncodedURIComponent(data)
     if (!json) return null
-    const parsed = JSON.parse(json) as SyncPayloadV2 | SyncPayloadV1
+    const parsed = JSON.parse(json) as SyncPayloadV3 | SyncPayloadV2 | SyncPayloadV1
+
+    if (parsed.v === 3) {
+      return normalizeState({ version: 2, ...parsed })
+    }
 
     if (parsed.v === 2) {
       return normalizeState(parsed)
@@ -59,31 +72,6 @@ export function decodeSyncFromUrl(search: string): AppState | null {
   }
 }
 
-export function mergeAppState(local: AppState, incoming: AppState): AppState {
-  const childById = new Map(local.children.map((c) => [c.id, c]))
-  for (const c of incoming.children) {
-    if (!childById.has(c.id)) childById.set(c.id, c)
-    else {
-      const existing = childById.get(c.id)!
-      childById.set(c.id, {
-        ...existing,
-        name: c.name || existing.name,
-        birthDate: c.birthDate || existing.birthDate,
-      })
-    }
-  }
-
-  const sessions = mergeSessions(local.sessions, incoming.sessions)
-
-  return {
-    version: 2,
-    children: [...childById.values()],
-    activeChildId: local.activeChildId || incoming.activeChildId,
-    sessions,
-    householdCode: local.householdCode || incoming.householdCode,
-  }
-}
-
 export function mergeSessions(
   local: AppState['sessions'],
   incoming: AppState['sessions'],
@@ -96,9 +84,59 @@ export function mergeSessions(
       byId.set(s.id, s)
       continue
     }
-    if (s.end && !existing.end) byId.set(s.id, s)
+    if (s.end && !existing.end) {
+      byId.set(s.id, s)
+      continue
+    }
+    if (s.end && existing.end) {
+      const sEnd = new Date(s.end).getTime()
+      const eEnd = new Date(existing.end).getTime()
+      if (sEnd > eEnd) byId.set(s.id, s)
+    }
   }
   return [...byId.values()].sort(
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
   )
+}
+
+function mergeDayMarkers(
+  local: AppState['dayMarkers'],
+  incoming: AppState['dayMarkers'],
+): AppState['dayMarkers'] {
+  const byKey = new Map<string, NonNullable<AppState['dayMarkers']>[0]>()
+  for (const m of local ?? []) byKey.set(`${m.childId}:${m.date}`, m)
+  for (const m of incoming ?? []) byKey.set(`${m.childId}:${m.date}`, m)
+  return [...byKey.values()]
+}
+
+export function mergeAppState(local: AppState, incoming: AppState): AppState {
+  const childById = new Map(local.children.map((c) => [c.id, c]))
+  for (const c of incoming.children) {
+    if (!childById.has(c.id)) childById.set(c.id, c)
+    else {
+      const existing = childById.get(c.id)!
+      childById.set(c.id, {
+        ...existing,
+        name: c.name || existing.name,
+        birthDate: c.birthDate || existing.birthDate,
+        routine: { ...existing.routine, ...c.routine },
+      })
+    }
+  }
+
+  const sessions = mergeSessions(local.sessions, incoming.sessions)
+  const mergeCount = (local.syncMeta?.mergeCount ?? 0) + 1
+
+  return normalizeState({
+    ...local,
+    children: [...childById.values()],
+    activeChildId: local.activeChildId || incoming.activeChildId,
+    sessions,
+    dayMarkers: mergeDayMarkers(local.dayMarkers, incoming.dayMarkers),
+    syncMeta: {
+      lastSyncedAt: new Date().toISOString(),
+      lastSyncLabel: `Merged ${incoming.sessions.length} sessions from partner`,
+      mergeCount,
+    },
+  })
 }

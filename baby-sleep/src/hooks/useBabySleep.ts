@@ -14,7 +14,19 @@ import { useSleepReminders } from './useSleepReminders'
 import { createDefaultChild, normalizeState, pickChildColor } from '../lib/migrate'
 import { loadStateWithLegacy, saveState } from '../lib/storage'
 import { decodeSyncFromUrl, mergeAppState } from '../lib/sync'
-import type { AppState, ChildProfile, ReminderSettings, SleepKind } from '../types'
+import { getGlanceSummary } from '../lib/glance'
+import { generateSleepHints } from '../lib/sleepHints'
+import { buildWeeklyReport } from '../lib/weeklyReport'
+import { upsertDayMarker, removeDayMarker, markersForChild } from '../lib/dayMarkers'
+import type {
+  AppState,
+  ChildProfile,
+  ChildRoutine,
+  DayMarkerTag,
+  ReminderSettings,
+  SleepKind,
+  SleepSession,
+} from '../types'
 
 function loadInitialState(): AppState {
   const base = loadStateWithLegacy()
@@ -39,8 +51,7 @@ export function useBabySleep() {
     return () => clearInterval(id)
   }, [])
 
-  // tick forces periodic refresh of timers and predictions
-  const now = useMemo(() => new Date(), [tick]) // eslint-disable-line react-hooks/exhaustive-deps -- tick is intentional clock
+  const now = useMemo(() => new Date(), [tick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeChild = useMemo(
     () => state.children.find((c) => c.id === state.activeChildId) ?? null,
@@ -52,22 +63,29 @@ export function useBabySleep() {
     [state.sessions, state.activeChildId],
   )
 
+  const childMarkers = useMemo(
+    () => markersForChild(state, state.activeChildId),
+    [state, state.activeChildId],
+  )
+
   const status = useMemo(() => getSleepStatus(childSessions), [childSessions])
+
+  const routine = activeChild?.routine
 
   const prediction = useMemo(
     () =>
       activeChild?.birthDate
-        ? predictNextNap(activeChild.birthDate, childSessions, now)
+        ? predictNextNap(activeChild.birthDate, childSessions, now, routine)
         : null,
-    [activeChild, childSessions, now],
+    [activeChild, childSessions, now, routine],
   )
 
   const bedtimePrediction = useMemo(
     () =>
       activeChild?.birthDate
-        ? predictNextBedtime(activeChild.birthDate, childSessions, now)
+        ? predictNextBedtime(activeChild.birthDate, childSessions, now, routine)
         : null,
-    [activeChild, childSessions, now],
+    [activeChild, childSessions, now, routine],
   )
 
   const nightStartedToday = useMemo(
@@ -108,6 +126,25 @@ export function useBabySleep() {
     return Math.floor((now.getTime() - status.asleepSince.getTime()) / 60_000)
   }, [status.asleepSince, now])
 
+  const needsProfile = !activeChild?.birthDate
+
+  const showOnboarding = !state.onboardingComplete
+
+  const glance = useMemo(
+    () => getGlanceSummary(status, prediction, bedtimePrediction, needsProfile, now),
+    [status, prediction, bedtimePrediction, needsProfile, now],
+  )
+
+  const sleepHints = useMemo(
+    () => generateSleepHints(childSessions, guidance, now),
+    [childSessions, guidance, now],
+  )
+
+  const weeklyReport = useMemo(
+    () => buildWeeklyReport(childSessions, now),
+    [childSessions, now],
+  )
+
   const setActiveChild = useCallback((childId: string) => {
     setState((s) => ({ ...s, activeChildId: childId }))
   }, [])
@@ -119,6 +156,7 @@ export function useBabySleep() {
         name: name.trim() || 'Baby',
         birthDate,
         color: pickChildColor(s.children.length),
+        routine: {},
       }
       return {
         ...s,
@@ -137,6 +175,15 @@ export function useBabySleep() {
     }))
   }, [])
 
+  const updateChildRoutine = useCallback((childId: string, routine: ChildRoutine) => {
+    setState((s) => ({
+      ...s,
+      children: s.children.map((c) =>
+        c.id === childId ? { ...c, routine: { ...c.routine, ...routine } } : c,
+      ),
+    }))
+  }, [])
+
   const removeChild = useCallback((childId: string) => {
     setState((s) => {
       const children = s.children.filter((c) => c.id !== childId)
@@ -147,6 +194,7 @@ export function useBabySleep() {
           children: [fresh],
           activeChildId: fresh.id,
           sessions: s.sessions.filter((x) => x.childId !== childId),
+          dayMarkers: (s.dayMarkers ?? []).filter((m) => m.childId !== childId),
         }
       }
       const activeChildId =
@@ -156,40 +204,34 @@ export function useBabySleep() {
         children,
         activeChildId,
         sessions: s.sessions.filter((x) => x.childId !== childId),
+        dayMarkers: (s.dayMarkers ?? []).filter((m) => m.childId !== childId),
       }
     })
   }, [])
 
-  const startSleep = useCallback(
-    (kind: SleepKind) => {
-      setState((s) => {
-        const open = s.sessions.find(
-          (x) => x.childId === s.activeChildId && x.end === null,
-        )
-        if (open) return s
-        return {
-          ...s,
-          sessions: [
-            ...s.sessions,
-            {
-              id: generateId(),
-              childId: s.activeChildId,
-              kind,
-              start: new Date().toISOString(),
-              end: null,
-            },
-          ],
-        }
-      })
-    },
-    [],
-  )
+  const startSleep = useCallback((kind: SleepKind) => {
+    setState((s) => {
+      const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
+      if (open) return s
+      return {
+        ...s,
+        sessions: [
+          ...s.sessions,
+          {
+            id: generateId(),
+            childId: s.activeChildId,
+            kind,
+            start: new Date().toISOString(),
+            end: null,
+          },
+        ],
+      }
+    })
+  }, [])
 
   const endSleep = useCallback(() => {
     setState((s) => {
-      const open = s.sessions.find(
-        (x) => x.childId === s.activeChildId && x.end === null,
-      )
+      const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
       if (!open) return s
       const end = new Date().toISOString()
       return {
@@ -199,6 +241,16 @@ export function useBabySleep() {
     })
   }, [])
 
+  const updateSession = useCallback(
+    (id: string, patch: Partial<Pick<SleepSession, 'kind' | 'start' | 'end'>>) => {
+      setState((s) => ({
+        ...s,
+        sessions: s.sessions.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+      }))
+    },
+    [],
+  )
+
   const deleteSession = useCallback((id: string) => {
     setState((s) => ({
       ...s,
@@ -206,17 +258,39 @@ export function useBabySleep() {
     }))
   }, [])
 
+  const setDayMarker = useCallback(
+    (date: string, tag: DayMarkerTag, note?: string) => {
+      setState((s) => upsertDayMarker(s, s.activeChildId, date, tag, note))
+    },
+    [],
+  )
+
+  const clearDayMarker = useCallback((markerId: string) => {
+    setState((s) => removeDayMarker(s, markerId))
+  }, [])
+
+  const completeOnboarding = useCallback(() => {
+    setState((s) => ({ ...s, onboardingComplete: true }))
+  }, [])
+
   const replaceState = useCallback((next: AppState) => {
-    setState(normalizeState(next))
+    setState(
+      normalizeState({
+        ...next,
+        syncMeta: {
+          lastSyncedAt: new Date().toISOString(),
+          lastSyncLabel: 'Imported backup',
+          mergeCount: next.syncMeta?.mergeCount ?? 0,
+        },
+      }),
+    )
   }, [])
 
   const recentSessions = useMemo(() => {
     return [...childSessions]
       .sort((a, b) => parseISO(b.start).getTime() - parseISO(a.start).getTime())
-      .slice(0, 30)
+      .slice(0, 50)
   }, [childSessions])
-
-  const needsProfile = !activeChild?.birthDate
 
   const setReminders = useCallback((next: ReminderSettings) => {
     setState((s) => ({ ...s, reminders: next }))
@@ -226,6 +300,7 @@ export function useBabySleep() {
     state,
     activeChild,
     childSessions,
+    childMarkers,
     status,
     prediction,
     bedtimePrediction,
@@ -238,13 +313,22 @@ export function useBabySleep() {
     awakeMinutes,
     asleepMinutes,
     formatDuration,
+    glance,
+    sleepHints,
+    weeklyReport,
+    showOnboarding,
     setActiveChild,
     addChild,
     updateChild,
+    updateChildRoutine,
     removeChild,
     startSleep,
     endSleep,
+    updateSession,
     deleteSession,
+    setDayMarker,
+    clearDayMarker,
+    completeOnboarding,
     replaceState,
     recentSessions,
     needsProfile,

@@ -1358,3 +1358,137 @@ input:focus, select:focus {
   font-size: 0.65rem;
   color: var(--text-muted);
 }
+
+/* Glance strip */
+.glance {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--primary-soft) 0%, var(--bg-elevated) 100%);
+  border: 1px solid var(--primary-muted);
+  margin-bottom: 0.75rem;
+}
+
+.glance__headline {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.glance__subline {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.glance--asleep {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+}
+
+/* Onboarding */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.onboarding-overlay .card {
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* Hints */
+.hints-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hints-list__item {
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.5rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+
+.hints-list__item p {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.hints-list__item--action {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+}
+
+.hints-list__item--watch {
+  border-color: var(--primary-muted);
+  background: var(--primary-soft);
+}
+
+/* Weekly report */
+.report-highlights {
+  margin: 1rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.report-highlights li {
+  margin-bottom: 0.35rem;
+}
+
+/* Day markers */
+.markers-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.markers-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.markers-list li span {
+  color: var(--text-muted);
+  min-width: 5.5rem;
+}
+
+/* Privacy & cloud */
+.privacy-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.privacy-list li {
+  margin-bottom: 0.65rem;
+}
+
+/* Larger touch targets at night (accessibility) */
+@media (prefers-reduced-motion: no-preference) {
+  .action-bar--primary .btn {
+    min-height: 3.5rem;
+    font-size: 1rem;
+  }
+}
+
+html[data-theme='dark'] .action-bar--primary .btn {
+  min-height: 3.6rem;
+}
