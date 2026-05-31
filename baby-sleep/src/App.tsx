@@ -82,6 +82,7 @@ function App() {
     startSleep,
     endSleep,
     setLastSessionFeeding,
+    addSession,
     updateSession,
     deleteSession,
     setDayMarker,
@@ -260,9 +261,12 @@ function App() {
             />
           )}
 
-          {tab === 'history' && (
+          {tab === 'history' && activeChild && (
             <SleepLog
               sessions={recentSessions}
+              childId={activeChild.id}
+              hasOpenSession={status.isAsleep}
+              onAdd={addSession}
               onUpdate={updateSession}
               onDelete={deleteSession}
             />

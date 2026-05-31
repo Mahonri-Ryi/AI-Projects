@@ -322,6 +322,36 @@ export function useBabySleep() {
     })
   }, [])
 
+  const addSession = useCallback(
+    (patch: Omit<SleepSession, 'id' | 'childId'>): boolean => {
+      let added = false
+      setState((s) => {
+        if (patch.end === null) {
+          const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
+          if (open) return s
+        }
+        if (patch.end && parseISO(patch.end).getTime() <= parseISO(patch.start).getTime()) {
+          return s
+        }
+        added = true
+        offerUndo(s.sessions, 'Added session')
+        return {
+          ...s,
+          sessions: [
+            ...s.sessions,
+            {
+              id: generateId(),
+              childId: s.activeChildId,
+              ...patch,
+            },
+          ],
+        }
+      })
+      return added
+    },
+    [offerUndo],
+  )
+
   const updateSession = useCallback(
     (
       id: string,
@@ -454,6 +484,7 @@ export function useBabySleep() {
     startSleep,
     endSleep,
     setLastSessionFeeding,
+    addSession,
     updateSession,
     deleteSession,
     setDayMarker,
