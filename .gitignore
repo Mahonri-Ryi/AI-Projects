@@ -5,3 +5,7 @@
 # Local env (per-project)
 .env
 .env.local
+
+# Dependencies / build
+node_modules/
+dist/
