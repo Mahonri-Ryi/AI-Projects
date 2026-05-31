@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useBabySleep } from './hooks/useBabySleep'
+import { useTheme } from './hooks/useTheme'
 import { AppShell, type AppTab } from './components/layout/AppShell'
 import { ChildrenManager } from './components/ChildrenManager'
 import { StatusHero } from './components/StatusHero'
@@ -11,11 +12,13 @@ import { SyncPanel } from './components/SyncPanel'
 import { InsightsDashboard } from './components/insights/InsightsDashboard'
 import { DashboardStats } from './components/DashboardStats'
 import { ResearchLinks } from './components/ui/ResearchLinks'
+import { ThemeSettings } from './components/ThemeSettings'
 import { getSources, SOURCES_TOTAL_SLEEP } from './data/researchCatalog'
 
 function App() {
   const [tab, setTab] = useState<AppTab>('home')
   const [settingsAddChild, setSettingsAddChild] = useState(false)
+  const { preference, isDark, setTheme } = useTheme()
 
   const {
     state,
@@ -52,6 +55,10 @@ function App() {
     setSettingsAddChild(true)
   }
 
+  const quickToggleTheme = () => {
+    setTheme(isDark ? 'light' : 'dark')
+  }
+
   return (
     <AppShell
       tab={tab}
@@ -62,6 +69,8 @@ function App() {
       onAddChild={goAddChild}
       ageLabel={ageLabel}
       statusPill={needsProfile ? undefined : statusPill}
+      isDark={isDark}
+      onThemeQuickToggle={quickToggleTheme}
       contentChildren={
         <>
           {needsProfile && tab === 'home' && (
@@ -116,6 +125,7 @@ function App() {
 
           {tab === 'settings' && (
             <>
+              <ThemeSettings preference={preference} onChange={setTheme} />
               <ChildrenManager
                 children={state.children}
                 activeChildId={state.activeChildId}
