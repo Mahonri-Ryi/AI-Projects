@@ -1,0 +1,43 @@
+name: Baby Sleep CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'baby-sleep/**'
+      - '.github/workflows/baby-sleep-ci.yml'
+      - '.github/workflows/deploy-baby-sleep.yml'
+  pull_request:
+    paths:
+      - 'baby-sleep/**'
+      - '.github/workflows/baby-sleep-ci.yml'
+      - '.github/workflows/deploy-baby-sleep.yml'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: baby-sleep
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: baby-sleep/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Production build
+        env:
+          GITHUB_PAGES: 'true'
+        run: npm run build

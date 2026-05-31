@@ -21,8 +21,16 @@ interface LegacyStateV1 {
   }>
   householdCode?: string
   version?: number
+  v?: number
   children?: ChildProfile[]
   activeChildId?: string
+}
+
+function isV2Payload(parsed: LegacyStateV1): boolean {
+  return (
+    (parsed.version === 2 || parsed.v === 2) &&
+    Array.isArray(parsed.children)
+  )
 }
 
 export function createDefaultChild(name = 'Baby', birthDate = ''): ChildProfile {
@@ -37,8 +45,8 @@ export function createDefaultChild(name = 'Baby', birthDate = ''): ChildProfile 
 export function normalizeState(raw: unknown): AppState {
   const parsed = raw as LegacyStateV1
 
-  if (parsed?.version === 2 && Array.isArray(parsed.children)) {
-    let children = parsed.children.map((c, i) => ({
+  if (parsed && isV2Payload(parsed)) {
+    let children = (parsed.children ?? []).map((c, i) => ({
       ...c,
       color: c.color || CHILD_COLORS[i % CHILD_COLORS.length],
     }))

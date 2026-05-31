@@ -42,7 +42,7 @@ export function NextNapCard({
   const minsToWindowEnd = differenceInMinutes(prediction.windowEnd, now)
 
   let countdownClass = ''
-  let countdownText = ''
+  let countdownText: string
 
   if (minsToSweet > 5) {
     countdownText = `Optimal wind-down in ~${minsToSweet} min`

@@ -15,10 +15,7 @@ import type {
   SleepStatus,
 } from '../types'
 
-export function getSleepStatus(
-  sessions: SleepSession[],
-  _now = new Date(),
-): SleepStatus {
+export function getSleepStatus(sessions: SleepSession[]): SleepStatus {
   const sorted = [...sessions].sort(
     (a, b) => parseISO(b.start).getTime() - parseISO(a.start).getTime(),
   )
@@ -115,7 +112,7 @@ export function predictNextNap(
   sessions: SleepSession[],
   now = new Date(),
 ): NextNapPrediction | null {
-  const status = getSleepStatus(sessions, now)
+  const status = getSleepStatus(sessions)
   const guidance = getWakeWindowGuidance(birthDate, now)
 
   if (status.isAsleep) {
