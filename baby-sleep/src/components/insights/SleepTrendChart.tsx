@@ -14,9 +14,15 @@ interface Props {
   data: DaySleepSummary[]
   targetMinHours: number
   targetMaxHours: number
+  compactXAxis?: boolean
 }
 
-export function SleepTrendChart({ data, targetMinHours, targetMaxHours }: Props) {
+export function SleepTrendChart({
+  data,
+  targetMinHours,
+  targetMaxHours,
+  compactXAxis = false,
+}: Props) {
   const chartData = data.map((d) => ({
     ...d,
     totalHours: Math.round((d.totalMinutes / 60) * 10) / 10,
@@ -42,6 +48,7 @@ export function SleepTrendChart({ data, targetMinHours, targetMaxHours }: Props)
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
             axisLine={false}
             tickLine={false}
+            interval={compactXAxis ? Math.max(0, Math.floor(chartData.length / 6) - 1) : 0}
           />
           <YAxis
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
@@ -110,7 +117,13 @@ export function SleepTrendChart({ data, targetMinHours, targetMaxHours }: Props)
   )
 }
 
-export function NapNightStackChart({ data }: { data: DaySleepSummary[] }) {
+export function NapNightStackChart({
+  data,
+  compactXAxis = false,
+}: {
+  data: DaySleepSummary[]
+  compactXAxis?: boolean
+}) {
   const chartData = data.map((d) => ({
     label: d.label,
     naps: Math.round((d.napMinutes / 60) * 10) / 10,
@@ -127,6 +140,7 @@ export function NapNightStackChart({ data }: { data: DaySleepSummary[] }) {
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
             axisLine={false}
             tickLine={false}
+            interval={compactXAxis ? Math.max(0, Math.floor(chartData.length / 6) - 1) : 0}
           />
           <YAxis
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}

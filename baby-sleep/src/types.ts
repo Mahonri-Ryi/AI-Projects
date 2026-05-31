@@ -1,5 +1,13 @@
 export type SleepKind = 'nap' | 'night'
 
+export type FeedingTag = 'breast' | 'bottle' | 'solids'
+
+export const FEEDING_TAG_LABELS: Record<FeedingTag, string> = {
+  breast: 'Breast',
+  bottle: 'Bottle',
+  solids: 'Solids',
+}
+
 export type DayMarkerTag =
   | 'regression-4mo'
   | 'regression-8mo'
@@ -40,6 +48,8 @@ export interface SleepSession {
   kind: SleepKind
   start: string // ISO
   end: string | null
+  /** Optional context before/after sleep */
+  feedingTags?: FeedingTag[]
 }
 
 export interface DayMarker {
@@ -62,6 +72,19 @@ export interface BabyProfile {
   birthDate: string
 }
 
+export interface ChecklistItem {
+  id: string
+  kind: 'nap' | 'bed'
+  label: string
+}
+
+export interface WindDownChecklistState {
+  items: ChecklistItem[]
+  /** yyyy-MM-dd when checkedIds was last reset */
+  checkedDate: string
+  checkedIds: string[]
+}
+
 export interface AppState {
   version: 2
   children: ChildProfile[]
@@ -72,6 +95,18 @@ export interface AppState {
   dayMarkers?: DayMarker[]
   syncMeta?: SyncMeta
   onboardingComplete?: boolean
+  checklist?: WindDownChecklistState
+}
+
+export interface UndoOffer {
+  label: string
+  expiresAt: number
+  sessionsSnapshot: SleepSession[]
+}
+
+export interface LoggingStreak {
+  currentDays: number
+  message: string
 }
 
 export interface ScienceSource {

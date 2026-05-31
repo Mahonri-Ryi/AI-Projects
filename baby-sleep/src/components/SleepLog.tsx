@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import type { SleepSession } from '../types'
+import { FEEDING_TAG_LABELS, type FeedingTag, type SleepSession } from '../types'
 import { formatDuration } from '../lib/sleepLogic'
 import { Card } from './ui/Card'
 import { SessionEditor } from './SessionEditor'
 
 interface Props {
   sessions: SleepSession[]
-  onUpdate: (id: string, patch: Partial<Pick<SleepSession, 'kind' | 'start' | 'end'>>) => void
+  onUpdate: (
+    id: string,
+    patch: Partial<Pick<SleepSession, 'kind' | 'start' | 'end' | 'feedingTags'>>,
+  ) => void
   onDelete: (id: string) => void
 }
 
@@ -59,6 +62,15 @@ export function SleepLog({ sessions, onUpdate, onDelete }: Props) {
                   {format(parseISO(s.start), 'h:mm a')}
                   {s.end ? ` – ${format(parseISO(s.end), 'h:mm a')}` : ' · in progress'}
                 </div>
+                {s.feedingTags && s.feedingTags.length > 0 && (
+                  <div className="log-feeding-tags">
+                    {s.feedingTags.map((t: FeedingTag) => (
+                      <span key={t} className="badge badge--muted">
+                        {FEEDING_TAG_LABELS[t]}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 {dur !== null && (

@@ -209,6 +209,7 @@ export function predictNextBedtime(
   sessions: SleepSession[],
   now = new Date(),
   routine?: ChildRoutine,
+  travelMode = false,
 ): NextBedtimePrediction | null {
   const status = getSleepStatus(sessions)
   const guidance = getBedtimeGuidance(birthDate, now)
@@ -267,14 +268,23 @@ export function predictNextBedtime(
     }
   }
 
-  const windowStart = max([
+  let windowStart = max([
     dateAtMinutesFromMidnight(now, guidance.windowStartMinutes),
     subMinutes(sweetSpot, 45),
   ])
-  const windowEnd = max([
+  let windowEnd = max([
     dateAtMinutesFromMidnight(now, guidance.windowEndMinutes),
     addMinutes(sweetSpot, 30),
   ])
+
+  if (travelMode) {
+    windowStart = subMinutes(sweetSpot, 75)
+    windowEnd = addMinutes(sweetSpot, 75)
+    if (!adjustmentNote) {
+      adjustmentNote =
+        'Travel mode: wider bedtime window while schedules adjust. Prioritize sleepy cues over the clock.'
+    }
+  }
 
   const historyNote = learnedFromHistory
     ? ' Blends your recent logged bedtimes with age-typical evening sleep.'

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useBabySleep } from './hooks/useBabySleep'
+import { useAppActions } from './hooks/useAppActions'
 import { useTheme } from './hooks/useTheme'
 import { AppShell, type AppTab } from './components/layout/AppShell'
 import { ChildrenManager } from './components/ChildrenManager'
@@ -27,11 +28,20 @@ import { ChildRoutineSettings } from './components/ChildRoutineSettings'
 import { BackupExportCard } from './components/BackupExportCard'
 import { PrivacyCard } from './components/PrivacyCard'
 import { CloudFeaturesCard } from './components/CloudFeaturesCard'
+import { ForgotToLogBanner } from './components/ForgotToLogBanner'
+import { UndoBanner } from './components/UndoBanner'
+import { LoggingStreakChip } from './components/LoggingStreakChip'
+import { WindDownChecklistCard } from './components/WindDownChecklistCard'
+import { NapTransitionCard } from './components/NapTransitionCard'
+import { WakeFeedingPrompt } from './components/WakeFeedingPrompt'
+import { AndroidShortcutsCard } from './components/AndroidShortcutsCard'
 import { getSources, SOURCES_TOTAL_SLEEP } from './data/researchCatalog'
 
 function App() {
   const [tab, setTab] = useState<AppTab>('home')
   const [settingsAddChild, setSettingsAddChild] = useState(false)
+  const [dismissForgotLog, setDismissForgotLog] = useState(false)
+  const [showFeedingPrompt, setShowFeedingPrompt] = useState(false)
   const { preference, isDark, setTheme } = useTheme()
   const pwa = usePwaUpdate()
 
@@ -54,7 +64,15 @@ function App() {
     glance,
     sleepHints,
     weeklyReport,
+    loggingStreak,
+    forgotToLog,
+    napTransition,
+    checklist,
+    travelMode,
     showOnboarding,
+    undo,
+    undoSecondsLeft,
+    undoLastAction,
     setActiveChild,
     addChild,
     updateChild,
@@ -62,16 +80,22 @@ function App() {
     removeChild,
     startSleep,
     endSleep,
+    setLastSessionFeeding,
     updateSession,
     deleteSession,
     setDayMarker,
     clearDayMarker,
     completeOnboarding,
     replaceState,
+    toggleChecklist,
+    addChecklist,
+    removeChecklist,
     recentSessions,
     needsProfile,
     now,
   } = useBabySleep()
+
+  useAppActions({ startSleep, endSleep })
 
   const displayName = activeChild?.name || 'Baby'
 
@@ -95,6 +119,12 @@ function App() {
       addChild(name, birthDate)
     }
     completeOnboarding()
+  }
+
+  const handleEndSleep = () => {
+    endSleep()
+    setShowFeedingPrompt(true)
+    setDismissForgotLog(false)
   }
 
   return (
@@ -137,18 +167,49 @@ function App() {
             />
           )}
 
+          {undo && undoSecondsLeft > 0 && (
+            <UndoBanner
+              label={undo.label}
+              secondsLeft={undoSecondsLeft}
+              onUndo={undoLastAction}
+            />
+          )}
+
           {tab === 'home' && (
             <>
               <DashboardGlance glance={glance} />
+              <LoggingStreakChip streak={loggingStreak} />
+              {forgotToLog && !dismissForgotLog && !status.isAsleep && (
+                <ForgotToLogBanner
+                  prompt={forgotToLog}
+                  onDismiss={() => setDismissForgotLog(true)}
+                />
+              )}
+              {showFeedingPrompt && !status.isAsleep && (
+                <WakeFeedingPrompt
+                  onSelect={(tags) => {
+                    setLastSessionFeeding(tags)
+                    setShowFeedingPrompt(false)
+                  }}
+                  onSkip={() => setShowFeedingPrompt(false)}
+                />
+              )}
               <StatusHero
                 status={status}
                 awakeMinutes={awakeMinutes}
                 asleepMinutes={asleepMinutes}
                 formatDuration={formatDuration}
               />
-              <ActionButtons status={status} onStart={startSleep} onEnd={endSleep} />
+              <ActionButtons status={status} onStart={startSleep} onEnd={handleEndSleep} />
+              <WindDownChecklistCard
+                checklist={checklist}
+                onToggle={toggleChecklist}
+                onAdd={addChecklist}
+                onRemove={removeChecklist}
+              />
               <DashboardStats sessions={childSessions} guidance={guidance} now={now} />
               <SleepHintsCard hints={sleepHints} />
+              {napTransition && <NapTransitionCard tip={napTransition} />}
               <NextNapCard
                 prediction={prediction}
                 guidance={guidance}
@@ -161,6 +222,7 @@ function App() {
                 status={status}
                 now={now}
                 nightStartedToday={nightStartedToday}
+                travelMode={travelMode}
               />
               {guidance && !needsProfile && (
                 <div className="guide-chip" style={{ width: '100%' }}>
@@ -176,7 +238,7 @@ function App() {
 
           {tab === 'insights' && (
             <>
-              <WeeklyReportCard report={weeklyReport} />
+              <WeeklyReportCard report={weeklyReport} childName={displayName} />
               <DayMarkersCard
                 markers={childMarkers}
                 onSet={setDayMarker}
@@ -209,6 +271,7 @@ function App() {
                 onApplyUpdate={pwa.applyUpdate}
                 onClearCache={pwa.clearCacheAndReload}
               />
+              <AndroidShortcutsCard glanceHeadline={glance.headline} />
               <BackupExportCard
                 state={state}
                 activeChild={activeChild}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { DAY_MARKER_LABELS, type DayMarker, type DayMarkerTag } from '../types'
 import { todayDateString } from '../lib/dayMarkers'
@@ -15,6 +16,16 @@ interface Props {
 export function DayMarkersCard({ markers, onSet, onClear, now = new Date() }: Props) {
   const today = todayDateString(now)
   const todayMarker = markers.find((m) => m.date === today)
+  const [note, setNote] = useState(todayMarker?.note ?? '')
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setNote(todayMarker?.note ?? ''), 0)
+    return () => window.clearTimeout(t)
+  }, [todayMarker?.id, todayMarker?.note])
+
+  const applyTag = (tag: DayMarkerTag) => {
+    onSet(today, tag, note.trim() || undefined)
+  }
 
   return (
     <Card title="Day markers" subtitle="Tag regressions, teething, travel, and more">
@@ -24,7 +35,7 @@ export function DayMarkersCard({ markers, onSet, onClear, now = new Date() }: Pr
           value={todayMarker?.tag ?? ''}
           onChange={(e) => {
             const tag = e.target.value as DayMarkerTag
-            if (tag) onSet(today, tag)
+            if (tag) applyTag(tag)
           }}
         >
           <option value="">No marker</option>
@@ -34,6 +45,18 @@ export function DayMarkersCard({ markers, onSet, onClear, now = new Date() }: Pr
             </option>
           ))}
         </select>
+      </label>
+      <label className="form-field">
+        <span>Note for today (optional)</span>
+        <input
+          type="text"
+          placeholder="e.g. Skipped second nap — guests over"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={() => {
+            if (todayMarker) onSet(today, todayMarker.tag, note.trim() || undefined)
+          }}
+        />
       </label>
       {todayMarker && (
         <button
@@ -53,7 +76,10 @@ export function DayMarkersCard({ markers, onSet, onClear, now = new Date() }: Pr
             .map((m) => (
               <li key={m.id}>
                 <span>{m.date}</span>
-                <strong>{DAY_MARKER_LABELS[m.tag]}</strong>
+                <div>
+                  <strong>{DAY_MARKER_LABELS[m.tag]}</strong>
+                  {m.note && <p className="markers-list__note">{m.note}</p>}
+                </div>
                 <button type="button" className="btn-icon" onClick={() => onClear(m.id)}>
                   Remove
                 </button>

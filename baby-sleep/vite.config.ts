@@ -35,6 +35,29 @@ export default defineConfig({
             purpose: 'any',
           },
         ],
+        shortcuts: [
+          {
+            name: 'Start nap',
+            short_name: 'Nap',
+            description: 'Log nap start',
+            url: `${base}?action=start-nap`,
+            icons: [{ src: 'favicon.svg', sizes: '96x96', type: 'image/svg+xml' }],
+          },
+          {
+            name: 'Wake up',
+            short_name: 'Wake',
+            description: 'End current sleep',
+            url: `${base}?action=wake`,
+            icons: [{ src: 'favicon.svg', sizes: '96x96', type: 'image/svg+xml' }],
+          },
+          {
+            name: 'Bedtime',
+            short_name: 'Bed',
+            description: 'Log bedtime start',
+            url: `${base}?action=start-bed`,
+            icons: [{ src: 'favicon.svg', sizes: '96x96', type: 'image/svg+xml' }],
+          },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
