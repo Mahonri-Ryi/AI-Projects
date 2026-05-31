@@ -1,37 +1,36 @@
-# Deploying Little Dream on GitHub Pages
+# Deploying Little Dream on GitHub Pages (free, public repo)
 
-The live app URL (after setup):
+**Live app URL:** https://mahonri-ryi.github.io/AI-Projects/baby-sleep/
 
-**https://mahonri-ryi.github.io/AI-Projects/baby-sleep/**
+## One-time setup (about 1 minute)
 
-## One-time setup (required — fixes 404)
-
-GitHub Pages must be turned on for this repository:
+GitHub still needs you to turn Pages on once (free for public repos):
 
 1. Open **https://github.com/Mahonri-Ryi/AI-Projects/settings/pages**
-2. Under **Build and deployment** → **Source**, choose **GitHub Actions** (not “Deploy from a branch”).
-3. Save if prompted.
+2. Under **Build and deployment** → **Source**, choose **Deploy from a branch**
+3. **Branch:** `gh-pages` · **Folder:** `/ (root)` · **Save**
+4. Wait 1–2 minutes, then open the live URL above
 
-Then re-run the deploy workflow:
+The workflow pushes the built app to the `gh-pages` branch automatically on every push to `main`.
 
-1. **https://github.com/Mahonri-Ryi/AI-Projects/actions/workflows/deploy-baby-sleep.yml**
-2. Click **Run workflow** → **Run workflow**
+## Re-deploy manually
 
-Wait ~1 minute, then open the app URL above.
+**Actions** → **Deploy Little Dream (baby-sleep)** → **Run workflow**
 
-## If it still fails
+Or push any change under `baby-sleep/`.
 
-- Confirm the latest **Deploy Little Dream (baby-sleep)** run is green.
-- Settings → Pages should show “Your site is live at …”
-- Hard-refresh the browser (or try a private window).
+## Troubleshooting
 
-## Local preview (production paths)
+| Problem | Fix |
+|--------|-----|
+| 404 on the URL | Confirm step 2–3 above; check that **Actions** last run is green |
+| Blank page | Hard refresh; ensure you use the full path `/baby-sleep/` |
+| Old version | Wait 2 min after deploy; try private/incognito window |
+
+## Local dev
 
 ```bash
 cd baby-sleep
-GITHUB_PAGES=true npm run build
-npx serve dist -l 4173 --single
-# Open http://localhost:4173/AI-Projects/baby-sleep/  (use a proxy or vite preview with base)
+npm install
+npm run dev
 ```
-
-Or: `npm run preview` after setting `base: '/'` temporarily.
