@@ -23,7 +23,8 @@ Or push any change under `baby-sleep/`.
 
 | Problem | Fix |
 |--------|-----|
-| 404 on the URL | Confirm step 2–3 above; check that **Actions** last run is green |
+| **“There isn’t a GitHub Pages site here”** (gray 404) | **Pages is turned off** in repo settings — not a bad deploy. Open [Pages settings](https://github.com/Mahonri-Ryi/AI-Projects/settings/pages), choose **Deploy from a branch**, branch **`gh-pages`**, folder **`/` (root)**, **Save**. Wait 1–2 min. (This can happen if the source was changed to GitHub Actions or None while setting up Cloudflare.) |
+| 404 on `/baby-sleep/` only | Confirm step 2–3 above; check that **Actions** → **Deploy Little Dream** last run is green |
 | Blank page | Hard refresh; ensure you use the full path `/baby-sleep/` |
 | Old version | Wait 2 min after deploy; try private/incognito window |
 
