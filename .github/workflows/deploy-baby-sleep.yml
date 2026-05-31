@@ -39,6 +39,7 @@ jobs:
       - name: Build for GitHub Pages
         env:
           GITHUB_PAGES: 'true'
+          VITE_APP_BUILD_ID: ${{ github.sha }}
         run: npm run build
 
       - name: Prepare site (app at /AI-Projects/baby-sleep/)

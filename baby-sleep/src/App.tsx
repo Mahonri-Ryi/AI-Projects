@@ -7,6 +7,9 @@ import { StatusHero } from './components/StatusHero'
 import { NextNapCard } from './components/NextNapCard'
 import { NextBedtimeCard } from './components/NextBedtimeCard'
 import { ReminderSettings } from './components/ReminderSettings'
+import { AppUpdateCard } from './components/AppUpdateCard'
+import { UpdateBanner } from './components/UpdateBanner'
+import { usePwaUpdate } from './hooks/usePwaUpdate'
 import { ActionButtons } from './components/ActionButtons'
 import { SleepLog } from './components/SleepLog'
 import { SciencePanel } from './components/SciencePanel'
@@ -21,6 +24,7 @@ function App() {
   const [tab, setTab] = useState<AppTab>('home')
   const [settingsAddChild, setSettingsAddChild] = useState(false)
   const { preference, isDark, setTheme } = useTheme()
+  const pwa = usePwaUpdate()
 
   const {
     state,
@@ -90,6 +94,8 @@ function App() {
             </div>
           )}
 
+          {pwa.needRefresh && <UpdateBanner onApplyUpdate={pwa.applyUpdate} />}
+
           {tab === 'home' && (
             <>
               <StatusHero
@@ -137,6 +143,13 @@ function App() {
 
           {tab === 'settings' && (
             <>
+              <AppUpdateCard
+                needRefresh={pwa.needRefresh}
+                checking={pwa.checking}
+                checkMessage={pwa.checkMessage}
+                onCheck={pwa.checkForUpdate}
+                onApplyUpdate={pwa.applyUpdate}
+              />
               <ThemeSettings preference={preference} onChange={setTheme} />
               <ReminderSettings settings={reminders} onChange={setReminders} />
               <ChildrenManager
