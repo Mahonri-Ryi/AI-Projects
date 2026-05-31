@@ -8,7 +8,13 @@ import {
   startOfDay,
   subDays,
 } from 'date-fns'
-import type { SleepSession } from '../types'
+import {
+  getSources,
+  SOURCES_CIRCADIAN,
+  SOURCES_NAP_FREQUENCY,
+  SOURCES_TOTAL_SLEEP,
+} from '../data/researchCatalog'
+import type { PatternInsight, SleepSession } from '../types'
 
 export interface DaySleepSummary {
   date: string // yyyy-MM-dd
@@ -27,13 +33,6 @@ export interface PeriodStats {
   avgNapMinutes: number
   daysWithData: number
   trendPercent: number | null // vs prior period
-}
-
-export interface PatternInsight {
-  id: string
-  type: 'positive' | 'neutral' | 'tip'
-  title: string
-  body: string
 }
 
 export interface TodayStats {
@@ -181,6 +180,7 @@ export function generateInsights(
       type: 'tip',
       title: 'Building your sleep profile',
       body: 'Log naps and bedtime for a few more days to unlock trend analysis and pattern detection.',
+      sources: getSources(SOURCES_TOTAL_SLEEP),
     })
     return insights
   }
@@ -193,6 +193,7 @@ export function generateInsights(
       type: 'positive',
       title: 'Sleep within age guidelines',
       body: `Average ${stats.avgTotalHours}h per day over the last ${withData.length} logged days — within the typical ${targetMinHours}–${targetMaxHours}h range for this age.`,
+      sources: getSources(SOURCES_TOTAL_SLEEP),
     })
   } else if (stats.avgTotalHours < targetMinHours) {
     insights.push({
@@ -200,6 +201,7 @@ export function generateInsights(
       type: 'tip',
       title: 'Total sleep below typical range',
       body: `Averaging ${stats.avgTotalHours}h vs. ${targetMinHours}–${targetMaxHours}h typical. Consider earlier bedtimes or an extra nap; discuss with your pediatrician if concerned.`,
+      sources: getSources(SOURCES_TOTAL_SLEEP),
     })
   } else {
     insights.push({
@@ -207,6 +209,7 @@ export function generateInsights(
       type: 'neutral',
       title: 'Higher total sleep than average',
       body: `Averaging ${stats.avgTotalHours}h — above the mid-range for age. Individual variation is normal; watch daytime mood and feeding.`,
+      sources: getSources(SOURCES_TOTAL_SLEEP),
     })
   }
 
@@ -217,6 +220,7 @@ export function generateInsights(
       type: 'neutral',
       title: 'Frequent daytime naps',
       body: `Most days include 3+ naps — common in younger infants. Wake windows may shorten as total nap time increases.`,
+      sources: getSources(SOURCES_NAP_FREQUENCY),
     })
   }
 
@@ -228,6 +232,7 @@ export function generateInsights(
       type: 'tip',
       title: 'Day-to-day variability',
       body: `Sleep ranged from ${formatHours(worstDay.totalMinutes)} on ${worstDay.label} to ${formatHours(bestDay.totalMinutes)} on ${bestDay.label}. Consistency often improves as circadian rhythm matures.`,
+      sources: getSources(SOURCES_CIRCADIAN),
     })
   }
 
@@ -237,6 +242,7 @@ export function generateInsights(
       type: stats.trendPercent > 0 ? 'positive' : 'neutral',
       title: stats.trendPercent > 0 ? 'Sleep trending up' : 'Sleep trending down',
       body: `Recent days average ${Math.abs(stats.trendPercent)}% ${stats.trendPercent > 0 ? 'more' : 'less'} sleep than earlier in this period.`,
+      sources: getSources(SOURCES_CIRCADIAN),
     })
   }
 

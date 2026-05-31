@@ -1,6 +1,8 @@
 import { differenceInMinutes, format } from 'date-fns'
+import { getSources, SOURCES_SLEEPY_CUES } from '../data/researchCatalog'
 import type { NextNapPrediction, WakeWindowGuidance, SleepStatus } from '../types'
 import { Card } from './ui/Card'
+import { ResearchLinks } from './ui/ResearchLinks'
 
 interface Props {
   prediction: NextNapPrediction | null
@@ -30,7 +32,7 @@ export function NextNapCard({
   if (!prediction || !guidance) {
     return (
       <Card title="Next nap" subtitle="Personalized scheduling">
-        <p className="prose">Add your baby&apos;s birth date in Settings to unlock age-based nap windows.</p>
+        <p className="prose">Add birth date in Settings for this child to unlock age-based nap windows.</p>
       </Card>
     )
   }
@@ -93,19 +95,34 @@ export function NextNapCard({
       )}
 
       {prediction.adjustmentNote && (
-        <p
-          style={{
-            fontSize: '0.85rem',
-            marginTop: '1rem',
-            padding: '0.75rem',
-            background: 'var(--warning-soft)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          {prediction.adjustmentNote}
-        </p>
+        <>
+          <p
+            style={{
+              fontSize: '0.85rem',
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: 'var(--warning-soft)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {prediction.adjustmentNote}
+          </p>
+          {prediction.adjustmentSources && (
+            <ResearchLinks
+              sources={prediction.adjustmentSources}
+              title="Why we adjusted this"
+              compact
+            />
+          )}
+        </>
       )}
+
+      <p className="prose" style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
+        {prediction.explanation}
+      </p>
+
+      <ResearchLinks sources={prediction.sources} title="Why we suggest this timing" compact />
 
       <div className="cue-pills">
         {guidance.sleepyCues.map((c) => (
@@ -114,6 +131,7 @@ export function NextNapCard({
           </span>
         ))}
       </div>
+      <ResearchLinks sources={getSources(SOURCES_SLEEPY_CUES)} title="Research on sleepy cues" compact />
     </Card>
   )
 }

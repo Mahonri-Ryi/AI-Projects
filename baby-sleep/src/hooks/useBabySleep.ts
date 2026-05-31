@@ -7,12 +7,13 @@ import {
   generateId,
   formatDuration,
 } from '../lib/sleepLogic'
-import { loadState, saveState } from '../lib/storage'
-import { decodeSyncFromUrl, mergeSessions } from '../lib/sync'
-import type { AppState, SleepKind } from '../types'
+import { createDefaultChild, normalizeState, pickChildColor } from '../lib/migrate'
+import { loadStateWithLegacy, saveState } from '../lib/storage'
+import { decodeSyncFromUrl, mergeAppState } from '../lib/sync'
+import type { AppState, ChildProfile, SleepKind } from '../types'
 
 export function useBabySleep() {
-  const [state, setState] = useState<AppState>(() => loadState())
+  const [state, setState] = useState<AppState>(() => loadStateWithLegacy())
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -25,13 +26,9 @@ export function useBabySleep() {
   }, [])
 
   useEffect(() => {
-    const payload = decodeSyncFromUrl(window.location.search)
-    if (!payload) return
-    setState((prev) => ({
-      ...prev,
-      profile: payload.profile.birthDate ? payload.profile : prev.profile,
-      sessions: mergeSessions(prev.sessions, payload.sessions),
-    }))
+    const incoming = decodeSyncFromUrl(window.location.search)
+    if (!incoming) return
+    setState((prev) => mergeAppState(prev, incoming))
     const url = new URL(window.location.href)
     url.searchParams.delete('sync')
     window.history.replaceState({}, '', url.pathname + url.hash)
@@ -39,25 +36,36 @@ export function useBabySleep() {
 
   const now = useMemo(() => new Date(), [tick])
 
-  const status = useMemo(() => getSleepStatus(state.sessions, now), [state.sessions, now])
+  const activeChild = useMemo(
+    () => state.children.find((c) => c.id === state.activeChildId) ?? null,
+    [state.children, state.activeChildId],
+  )
+
+  const childSessions = useMemo(
+    () => state.sessions.filter((s) => s.childId === state.activeChildId),
+    [state.sessions, state.activeChildId],
+  )
+
+  const status = useMemo(() => getSleepStatus(childSessions, now), [childSessions, now])
+
   const prediction = useMemo(
     () =>
-      state.profile.birthDate
-        ? predictNextNap(state.profile.birthDate, state.sessions, now)
+      activeChild?.birthDate
+        ? predictNextNap(activeChild.birthDate, childSessions, now)
         : null,
-    [state.profile.birthDate, state.sessions, now],
+    [activeChild?.birthDate, childSessions, now],
   )
 
   const guidance = useMemo(
     () =>
-      state.profile.birthDate
-        ? getWakeWindowGuidance(state.profile.birthDate, now)
+      activeChild?.birthDate
+        ? getWakeWindowGuidance(activeChild.birthDate, now)
         : null,
-    [state.profile.birthDate, now],
+    [activeChild?.birthDate, now],
   )
 
-  const ageMonths = state.profile.birthDate
-    ? getAgeInMonths(state.profile.birthDate, now)
+  const ageMonths = activeChild?.birthDate
+    ? getAgeInMonths(activeChild.birthDate, now)
     : null
   const ageLabel = ageMonths !== null ? formatAge(ageMonths) : null
 
@@ -71,27 +79,88 @@ export function useBabySleep() {
     return Math.floor((now.getTime() - status.asleepSince.getTime()) / 60_000)
   }, [status.asleepSince, now])
 
-  const updateProfile = useCallback((name: string, birthDate: string) => {
-    setState((s) => ({ ...s, profile: { name, birthDate } }))
+  const setActiveChild = useCallback((childId: string) => {
+    setState((s) => ({ ...s, activeChildId: childId }))
   }, [])
 
-  const startSleep = useCallback((kind: SleepKind) => {
+  const addChild = useCallback((name: string, birthDate: string) => {
     setState((s) => {
-      const open = s.sessions.find((x) => x.end === null)
-      if (open) return s
+      const child: ChildProfile = {
+        id: generateId(),
+        name: name.trim() || 'Baby',
+        birthDate,
+        color: pickChildColor(s.children.length),
+      }
       return {
         ...s,
-        sessions: [
-          ...s.sessions,
-          { id: generateId(), kind, start: new Date().toISOString(), end: null },
-        ],
+        children: [...s.children, child],
+        activeChildId: child.id,
       }
     })
   }, [])
 
+  const updateChild = useCallback((childId: string, name: string, birthDate: string) => {
+    setState((s) => ({
+      ...s,
+      children: s.children.map((c) =>
+        c.id === childId ? { ...c, name: name.trim() || c.name, birthDate } : c,
+      ),
+    }))
+  }, [])
+
+  const removeChild = useCallback((childId: string) => {
+    setState((s) => {
+      const children = s.children.filter((c) => c.id !== childId)
+      if (children.length === 0) {
+        const fresh = createDefaultChild()
+        return {
+          ...s,
+          children: [fresh],
+          activeChildId: fresh.id,
+          sessions: s.sessions.filter((x) => x.childId !== childId),
+        }
+      }
+      const activeChildId =
+        s.activeChildId === childId ? children[0].id : s.activeChildId
+      return {
+        ...s,
+        children,
+        activeChildId,
+        sessions: s.sessions.filter((x) => x.childId !== childId),
+      }
+    })
+  }, [])
+
+  const startSleep = useCallback(
+    (kind: SleepKind) => {
+      setState((s) => {
+        const open = s.sessions.find(
+          (x) => x.childId === s.activeChildId && x.end === null,
+        )
+        if (open) return s
+        return {
+          ...s,
+          sessions: [
+            ...s.sessions,
+            {
+              id: generateId(),
+              childId: s.activeChildId,
+              kind,
+              start: new Date().toISOString(),
+              end: null,
+            },
+          ],
+        }
+      })
+    },
+    [],
+  )
+
   const endSleep = useCallback(() => {
     setState((s) => {
-      const open = s.sessions.find((x) => x.end === null)
+      const open = s.sessions.find(
+        (x) => x.childId === s.activeChildId && x.end === null,
+      )
       if (!open) return s
       const end = new Date().toISOString()
       return {
@@ -109,19 +178,21 @@ export function useBabySleep() {
   }, [])
 
   const replaceState = useCallback((next: AppState) => {
-    setState(next)
+    setState(normalizeState(next))
   }, [])
 
   const recentSessions = useMemo(() => {
-    return [...state.sessions]
+    return [...childSessions]
       .sort((a, b) => parseISO(b.start).getTime() - parseISO(a.start).getTime())
       .slice(0, 30)
-  }, [state.sessions])
+  }, [childSessions])
 
-  const allSessions = state.sessions
+  const needsProfile = !activeChild?.birthDate
 
   return {
     state,
+    activeChild,
+    childSessions,
     status,
     prediction,
     guidance,
@@ -130,13 +201,16 @@ export function useBabySleep() {
     awakeMinutes,
     asleepMinutes,
     formatDuration,
-    updateProfile,
+    setActiveChild,
+    addChild,
+    updateChild,
+    removeChild,
     startSleep,
     endSleep,
     deleteSession,
     replaceState,
     recentSessions,
-    allSessions,
+    needsProfile,
     now,
   }
 }

@@ -1,21 +1,39 @@
 export type SleepKind = 'nap' | 'night'
 
+export interface ChildProfile {
+  id: string
+  name: string
+  birthDate: string // YYYY-MM-DD
+  color: string // hex accent for UI
+}
+
 export interface SleepSession {
   id: string
+  childId: string
   kind: SleepKind
   start: string // ISO
   end: string | null
 }
 
+/** @deprecated Legacy single-child profile — migrated to ChildProfile */
 export interface BabyProfile {
   name: string
-  birthDate: string // YYYY-MM-DD
+  birthDate: string
 }
 
 export interface AppState {
-  profile: BabyProfile
+  version: 2
+  children: ChildProfile[]
+  activeChildId: string
   sessions: SleepSession[]
   householdCode: string
+}
+
+export interface ScienceSource {
+  id?: string
+  title: string
+  url: string
+  note?: string
 }
 
 export interface WakeWindowGuidance {
@@ -30,12 +48,6 @@ export interface WakeWindowGuidance {
   sources: ScienceSource[]
 }
 
-export interface ScienceSource {
-  title: string
-  url: string
-  note?: string
-}
-
 export interface NextNapPrediction {
   windowStart: Date
   windowEnd: Date
@@ -43,6 +55,16 @@ export interface NextNapPrediction {
   targetWakeMinutes: number
   explanation: string
   adjustmentNote?: string
+  sources: ScienceSource[]
+  adjustmentSources?: ScienceSource[]
+}
+
+export interface PatternInsight {
+  id: string
+  type: 'positive' | 'neutral' | 'tip'
+  title: string
+  body: string
+  sources: ScienceSource[]
 }
 
 export interface SleepStatus {
