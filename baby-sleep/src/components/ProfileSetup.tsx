@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Card } from './ui/Card'
 
 interface Props {
   name: string
@@ -17,32 +18,34 @@ export function ProfileSetup({ name, birthDate, onSave }: Props) {
   }
 
   return (
-    <form className="card profile-form" onSubmit={handleSubmit}>
-      <h2>Baby profile</h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-        Age drives wake-window guidance from pediatric sleep research.
-      </p>
-      <div className="field">
-        <label htmlFor="name">Name</label>
-        <input
-          id="name"
-          value={localName}
-          onChange={(e) => setLocalName(e.target.value)}
-          placeholder="e.g. Luna"
-        />
-      </div>
-      <div className="field">
-        <label htmlFor="birth">Birth date</label>
-        <input
-          id="birth"
-          type="date"
-          value={localBirth}
-          onChange={(e) => setLocalBirth(e.target.value)}
-          required
-          max={new Date().toISOString().slice(0, 10)}
-        />
-      </div>
-      <button type="submit">Save</button>
-    </form>
+    <Card title="Child profile" subtitle="Used for age-based sleep science and analytics">
+      <form onSubmit={handleSubmit}>
+        <div className="form-field">
+          <label htmlFor="name">Display name</label>
+          <input
+            id="name"
+            value={localName}
+            onChange={(e) => setLocalName(e.target.value)}
+            placeholder="e.g. Luna"
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="birth">Date of birth</label>
+          <input
+            id="birth"
+            type="date"
+            value={localBirth}
+            onChange={(e) => setLocalBirth(e.target.value)}
+            required
+            max={new Date().toISOString().slice(0, 10)}
+          />
+        </div>
+        <div className="form-actions">
+          <button type="submit" className="btn btn--primary">
+            Save profile
+          </button>
+        </div>
+      </form>
+    </Card>
   )
 }

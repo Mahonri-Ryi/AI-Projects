@@ -1,5 +1,5 @@
-import type { SleepStatus } from '../types'
-import type { SleepKind } from '../types'
+import { IconMoon, IconSun } from './icons'
+import type { SleepStatus, SleepKind } from '../types'
 
 interface Props {
   status: SleepStatus
@@ -10,22 +10,25 @@ interface Props {
 export function ActionButtons({ status, onStart, onEnd }: Props) {
   if (status.isAsleep) {
     return (
-      <section className="actions">
-        <button type="button" className="primary" onClick={onEnd}>
+      <div className="action-bar">
+        <button type="button" className="btn btn--primary" onClick={onEnd}>
+          <IconSun size={20} />
           Wake up
         </button>
-      </section>
+      </div>
     )
   }
 
   return (
-    <section className="actions">
-      <button type="button" className="secondary nap" onClick={() => onStart('nap')}>
+    <div className="action-bar">
+      <button type="button" className="btn btn--nap" onClick={() => onStart('nap')}>
+        <IconSun size={18} />
         Start nap
       </button>
-      <button type="button" className="secondary night" onClick={() => onStart('night')}>
+      <button type="button" className="btn btn--night" onClick={() => onStart('night')}>
+        <IconMoon size={18} />
         Bedtime
       </button>
-    </section>
+    </div>
   )
 }
