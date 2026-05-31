@@ -1,4 +1,5 @@
 import type { WakeWindowGuidance } from '../types'
+import { getAllSources } from './researchCatalog'
 
 /**
  * Age-based sleep guidance synthesized from pediatric sleep research.
@@ -117,33 +118,7 @@ export const SLEEPY_CUES = [
   'Turning head away from stimulation',
 ]
 
-export const RESEARCH_SOURCES = [
-  {
-    title: 'National Sleep Foundation — Sleep Duration Recommendations',
-    url: 'https://www.sleepfoundation.org/children-and-sleep/how-much-sleep-do-babies-and-kids-need',
-    note: 'Newborns 14–17 h; infants 12–15 h; toddlers 11–14 h per 24 h',
-  },
-  {
-    title: 'Cleveland Clinic — Wake Windows by Age',
-    url: 'https://health.clevelandclinic.org/wake-windows-by-age',
-    note: 'Developmental wake-window ranges in the first year',
-  },
-  {
-    title: 'Pediatric Research — Sleep and infant development in the first year',
-    url: 'https://link.springer.com/article/10.1038/s41390-026-04780-4',
-    note: 'Sleep consolidation, nap frequency, and TST changes 0–12 mo',
-  },
-  {
-    title: 'Sleep Medicine Reviews — Optimizing infant sleep (evidence-based review)',
-    url: 'https://www.sciencedirect.com/science/article/abs/pii/S1526054225001083',
-    note: 'Polyphasic sleep, wake windows 30–90 min in early months',
-  },
-  {
-    title: 'Baby Sleep Science — Wake windows, sleep pressure & circadian rhythm',
-    url: 'https://www.babysleepscience.com/single-post/the-science-behind-wake-windows-and-why-they-don-t-matter-as-much-as-you-think',
-    note: 'Use wake windows flexibly for naps; keep bedtime consistent after ~3 mo',
-  },
-]
+export const RESEARCH_SOURCES = getAllSources()
 
 export function getAgeInMonths(birthDate: string, asOf = new Date()): number {
   const birth = new Date(birthDate + 'T12:00:00')

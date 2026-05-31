@@ -1,15 +1,20 @@
 import type { ReactNode } from 'react'
+import type { ChildProfile } from '../../types'
 import { IconBook, IconChart, IconHome, IconList, IconSettings } from '../icons'
+import { ChildSwitcher } from '../ChildSwitcher'
 
 export type AppTab = 'home' | 'insights' | 'history' | 'guide' | 'settings'
 
 interface AppShellProps {
   tab: AppTab
   onTabChange: (tab: AppTab) => void
-  childName: string
+  children: ChildProfile[]
+  activeChildId: string
+  onSelectChild: (id: string) => void
+  onAddChild: () => void
   ageLabel: string | null
   statusPill?: { label: string; variant: 'awake' | 'asleep' }
-  children: ReactNode
+  contentChildren: ReactNode
 }
 
 const NAV: { id: AppTab; label: string; Icon: typeof IconHome }[] = [
@@ -23,11 +28,16 @@ const NAV: { id: AppTab; label: string; Icon: typeof IconHome }[] = [
 export function AppShell({
   tab,
   onTabChange,
-  childName,
+  children,
+  activeChildId,
+  onSelectChild,
+  onAddChild,
   ageLabel,
   statusPill,
-  children,
+  contentChildren,
 }: AppShellProps) {
+  const activeChild = children.find((c) => c.id === activeChildId)
+
   return (
     <div className="app-shell">
       <header className="top-bar">
@@ -38,7 +48,7 @@ export function AppShell({
           <div>
             <p className="top-bar__product">Little Dream</p>
             <p className="top-bar__child">
-              {childName}
+              {activeChild?.name ?? 'Select child'}
               {ageLabel ? ` · ${ageLabel}` : ''}
             </p>
           </div>
@@ -51,7 +61,16 @@ export function AppShell({
         )}
       </header>
 
-      <main className="app-main">{children}</main>
+      {children.length > 0 && (
+        <ChildSwitcher
+          children={children}
+          activeChildId={activeChildId}
+          onSelect={onSelectChild}
+          onAdd={onAddChild}
+        />
+      )}
+
+      <main className="app-main">{contentChildren}</main>
 
       <nav className="bottom-nav" aria-label="Main navigation">
         {NAV.map(({ id, label, Icon }) => (

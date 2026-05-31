@@ -1,5 +1,10 @@
 import { differenceInMinutes, addMinutes, parseISO, isSameDay } from 'date-fns'
 import {
+  getSources,
+  SOURCES_SHORT_NAP,
+  SOURCES_WAKE_WINDOWS,
+} from '../data/researchCatalog'
+import {
   getAgeInMonths,
   getWakeWindowGuidance,
   typicalNapDurationMinutes,
@@ -64,7 +69,7 @@ function adjustedWakeMinutes(
   sessions: SleepSession[],
   baseTarget: number,
   now: Date,
-): { minutes: number; note?: string } {
+): { minutes: number; note?: string; usedShortNapSources?: boolean } {
   const sorted = [...sessions]
     .filter((s) => s.end)
     .sort((a, b) => parseISO(b.end!).getTime() - parseISO(a.end!).getTime())
@@ -80,6 +85,7 @@ function adjustedWakeMinutes(
     return {
       minutes: Math.max(30, baseTarget - 15),
       note: 'Last nap was short — slightly shorter wake window may help avoid overtiredness.',
+      usedShortNapSources: true,
     }
   }
 
@@ -87,6 +93,7 @@ function adjustedWakeMinutes(
     return {
       minutes: baseTarget + 15,
       note: 'Last nap was long — baby may tolerate a slightly longer wake window.',
+      usedShortNapSources: true,
     }
   }
 
@@ -119,7 +126,7 @@ export function predictNextNap(
     return null
   }
 
-  const { minutes: targetWake, note } = adjustedWakeMinutes(
+  const { minutes: targetWake, note, usedShortNapSources } = adjustedWakeMinutes(
     birthDate,
     sessions,
     guidance.targetMinutes,
@@ -140,6 +147,8 @@ export function predictNextNap(
     targetWakeMinutes: targetWake,
     explanation,
     adjustmentNote: note,
+    sources: getSources(SOURCES_WAKE_WINDOWS),
+    adjustmentSources: usedShortNapSources ? getSources(SOURCES_SHORT_NAP) : undefined,
   }
 }
 

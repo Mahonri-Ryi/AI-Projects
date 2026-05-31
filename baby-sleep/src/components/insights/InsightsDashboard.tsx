@@ -9,7 +9,9 @@ import {
   getPeriodStats,
   getTodayStats,
 } from '../../lib/analytics'
+import { getSources, SOURCES_TOTAL_SLEEP } from '../../data/researchCatalog'
 import { Card, StatCard } from '../ui/Card'
+import { ResearchLinks } from '../ui/ResearchLinks'
 import { IconTrendUp } from '../icons'
 import { NapNightStackChart, SleepTrendChart } from './SleepTrendChart'
 import { DayTimeline, TodayTimelineHeader } from './DayTimeline'
@@ -126,6 +128,7 @@ export function InsightsDashboard({ sessions, guidance, now }: Props) {
             </li>
           </ul>
         </div>
+        <ResearchLinks sources={getSources(SOURCES_TOTAL_SLEEP)} title="Daily sleep guidelines" compact />
       </Card>
 
       <Card title="Today's schedule" subtitle={<TodayTimelineHeader now={now} />}>
@@ -162,6 +165,7 @@ export function InsightsDashboard({ sessions, guidance, now }: Props) {
               <div>
                 <strong>{item.title}</strong>
                 <p>{item.body}</p>
+                <ResearchLinks sources={item.sources} compact />
               </div>
             </li>
           ))}

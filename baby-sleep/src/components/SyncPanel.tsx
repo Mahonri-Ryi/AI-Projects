@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { normalizeState } from '../lib/migrate'
 import { encodeSyncLink } from '../lib/sync'
 import type { AppState } from '../types'
 import { Card } from './ui/Card'
@@ -51,9 +52,9 @@ export function SyncPanel({ state, onImport }: Props) {
 
   return (
     <>
-      <Card title="Family sync" subtitle="Share data across devices without an account">
+      <Card title="Family sync" subtitle="Share all children and sleep logs across devices">
         <p className="prose" style={{ marginBottom: '1rem' }}>
-          Send a secure link to your partner. Opening it merges sleep history and profile on their device.
+          Send a secure link to your partner. Opening it merges every child&apos;s profile and sleep history.
         </p>
         <div className="btn-row">
           <button type="button" className="btn btn--primary" onClick={shareNative}>
@@ -105,12 +106,8 @@ export function SyncPanel({ state, onImport }: Props) {
                 const reader = new FileReader()
                 reader.onload = () => {
                   try {
-                    const data = JSON.parse(reader.result as string) as AppState
-                    onImport({
-                      profile: data.profile ?? state.profile,
-                      sessions: data.sessions ?? [],
-                      householdCode: data.householdCode ?? '',
-                    })
+                    const data = JSON.parse(reader.result as string)
+                    onImport(normalizeState(data))
                   } catch {
                     alert('Invalid backup file')
                   }
