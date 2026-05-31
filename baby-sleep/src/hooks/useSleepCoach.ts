@@ -33,7 +33,10 @@ export function useSleepCoach({
   const [state, setState] = useState<SleepCoachState>(loadSleepCoachState)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [cursorKeyOk, setCursorKeyOk] = useState<string | null>(null)
+  const [keyTest, setKeyTest] = useState<{
+    status: 'idle' | 'checking' | 'ok' | 'error'
+    message: string
+  }>({ status: 'idle', message: '' })
 
   useEffect(() => {
     saveSleepCoachState(state)
@@ -69,7 +72,7 @@ export function useSleepCoach({
               : s.settings.model,
       },
     }))
-    setCursorKeyOk(null)
+    setKeyTest({ status: 'idle', message: '' })
   }, [])
 
   const clearApiKey = useCallback(() => {
@@ -77,17 +80,20 @@ export function useSleepCoach({
       ...s,
       settings: { ...s.settings, apiKey: '' },
     }))
-    setCursorKeyOk(null)
+    setKeyTest({ status: 'idle', message: '' })
   }, [])
 
   const checkCursorKey = useCallback(async () => {
-    const key = state.settings.apiKey.trim()
-    if (!key.startsWith('crsr_')) {
-      setCursorKeyOk(null)
-      return
+    setKeyTest({ status: 'checking', message: 'Checking…' })
+    const result = await validateCursorApiKey(
+      state.settings.apiKey,
+      state.settings.proxyBaseUrl,
+    )
+    if (result.ok) {
+      setKeyTest({ status: 'ok', message: result.label })
+    } else {
+      setKeyTest({ status: 'error', message: result.message })
     }
-    const result = await validateCursorApiKey(key, state.settings.proxyBaseUrl)
-    setCursorKeyOk(result.ok ? (result.label ?? 'Valid') : 'Invalid key')
   }, [state.settings.apiKey, state.settings.proxyBaseUrl])
 
   const selectThread = useCallback((threadId: string) => {
@@ -206,7 +212,7 @@ export function useSleepCoach({
     activeThread,
     sending,
     error,
-    cursorKeyOk,
+    keyTest,
     updateSettings,
     setApiKey,
     clearApiKey,

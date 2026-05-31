@@ -1800,6 +1800,10 @@ html[data-theme='dark'] .action-bar--primary .btn {
   color: var(--warning);
 }
 
+.coach-hint--ok {
+  color: var(--success);
+}
+
 .coach-thread-picker {
   display: flex;
   gap: 0.35rem;
