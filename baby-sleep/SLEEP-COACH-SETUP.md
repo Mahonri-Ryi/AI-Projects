@@ -39,6 +39,9 @@ Your key and chat history stay **on your device**. The proxy does not save keys.
 
 You only do this once. The same Worker URL can be used on every device.
 
+> **Connected the Worker to GitHub?** Cloudflare won’t show a normal “edit script” screen — you edit `baby-sleep/coach-proxy/worker.js` on GitHub instead.  
+> **Full guide:** [coach-proxy/CLOUDFLARE-GIT-SETUP.md](./coach-proxy/CLOUDFLARE-GIT-SETUP.md)
+
 ### 2.1 Create a Cloudflare account
 
 1. Go to **https://dash.cloudflare.com/sign-up** (free tier is enough).
