@@ -1,2 +1,3 @@
 # AI-Projects
-random and fun projects
+
+A clean slate for experiments and side projects.
