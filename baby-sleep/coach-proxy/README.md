@@ -1,12 +1,14 @@
 # Sleep Coach proxy (required for live app)
 
-Browsers block direct calls to `api.cursor.com` and `api.openai.com` (CORS). Sleep Coach sends your **API key from the phone** through a tiny proxy you deploy.
+**Full step-by-step guide:** [../SLEEP-COACH-SETUP.md](../SLEEP-COACH-SETUP.md)
 
-## Cursor API key (recommended)
+Browsers block direct calls to `api.cursor.com` (CORS). The installed PWA must use this Worker.
 
-1. Create a key at [cursor.com/dashboard](https://cursor.com/dashboard) → **API Keys** (`crsr_…`).
-2. Deploy this Worker (Cloudflare dashboard → paste `worker.js`).
-3. In the app: **Coach → Setup** → paste key + Worker URL (e.g. `https://little-dream-coach.you.workers.dev`).
+## Quick start
+
+1. **API key:** [cursor.com/dashboard](https://cursor.com/dashboard) → **API Keys** → create → copy `crsr_…` (Cloud Agents key, not Admin API key).
+2. **Deploy:** Cloudflare → Workers & Pages → Create Worker → paste `worker.js` from this folder → Deploy.
+3. **App:** Coach → Setup → **Proxy URL first** (`https://your-worker.workers.dev`) → **Cursor API key** → **Test key** → should show **Connected: …**
 
 The worker forwards `/cursor/*` to Cursor and does **not** store keys.
 

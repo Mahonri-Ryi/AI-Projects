@@ -12,6 +12,7 @@ A mobile-friendly PWA to log naps and bedtime, with **research-based next-nap an
 - **Sleepy cues** reminder and links to sources (NSF, Cleveland Clinic, pediatric sleep literature)
 - **Share link** so your partner can sync profile and history (no account; data stays in the browser)
 - **Add to Home Screen** for a full-screen app on iPhone/Android
+- **Sleep Coach** tab — ask sleep questions with your own **Cursor API key** ([setup guide](./SLEEP-COACH-SETUP.md))
 
 ## Development
 

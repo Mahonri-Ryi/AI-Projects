@@ -7,8 +7,32 @@ export interface CursorAgentRefs {
   runId: string
 }
 
+function basicAuthHeader(apiKey: string): string {
+  return `Basic ${btoa(`${apiKey.trim()}:`)}`
+}
+
+/** Cloud Agents API: Basic auth is the documented default. */
 function authHeader(apiKey: string): string {
-  return `Bearer ${apiKey.trim()}`
+  return basicAuthHeader(apiKey)
+}
+
+async function cursorRequestWithAuth(
+  proxyBase: string,
+  apiKey: string,
+  path: string,
+  init: RequestInit,
+): Promise<Response> {
+  let res = await cursorRequest(proxyBase, apiKey, path, init, basicAuthHeader(apiKey))
+  if (res.status === 401) {
+    res = await cursorRequest(
+      proxyBase,
+      apiKey,
+      path,
+      init,
+      `Bearer ${apiKey.trim()}`,
+    )
+  }
+  return res
 }
 
 function joinBase(proxyBase: string, path: string): string {
@@ -22,13 +46,18 @@ async function cursorRequest(
   apiKey: string,
   path: string,
   init: RequestInit,
+  authorization?: string,
 ): Promise<Response> {
   const url = proxyBase ? joinBase(proxyBase, path) : `${CURSOR_API}${path}`
+  const auth = authorization ?? authHeader(apiKey)
+  const headers: Record<string, string> = { Authorization: auth }
+  if (init.method !== 'GET') {
+    headers['Content-Type'] = 'application/json'
+  }
   return fetch(url, {
     ...init,
     headers: {
-      Authorization: authHeader(apiKey),
-      'Content-Type': 'application/json',
+      ...headers,
       ...(init.headers as Record<string, string> | undefined),
     },
   })
@@ -72,7 +101,7 @@ export async function createCursorAgentRun(
   promptText: string,
   modelId: string,
 ): Promise<CursorAgentRefs> {
-  const res = await cursorRequest(proxyBase, apiKey, '/v1/agents', {
+  const res = await cursorRequestWithAuth(proxyBase, apiKey, '/v1/agents', {
     method: 'POST',
     body: JSON.stringify({
       prompt: { text: promptText },
@@ -102,7 +131,7 @@ export async function followUpCursorAgentRun(
   agentId: string,
   promptText: string,
 ): Promise<CursorAgentRefs> {
-  const res = await cursorRequest(proxyBase, apiKey, `/v1/agents/${agentId}/runs`, {
+  const res = await cursorRequestWithAuth(proxyBase, apiKey, `/v1/agents/${agentId}/runs`, {
     method: 'POST',
     body: JSON.stringify({
       prompt: { text: promptText },
@@ -194,7 +223,7 @@ export async function waitForCursorRunText(
   const started = Date.now()
 
   while (Date.now() - started < maxWaitMs) {
-    const streamRes = await cursorRequest(
+    const streamRes = await cursorRequestWithAuth(
       proxyBase,
       apiKey,
       `/v1/agents/${agentId}/runs/${runId}/stream`,
@@ -207,7 +236,7 @@ export async function waitForCursorRunText(
       if (text) return text
     }
 
-    const statusRes = await cursorRequest(
+    const statusRes = await cursorRequestWithAuth(
       proxyBase,
       apiKey,
       `/v1/agents/${agentId}/runs/${runId}`,
@@ -230,7 +259,7 @@ export async function waitForCursorRunText(
         throw new CoachApiError(`Cursor run ended with status: ${status.status}`, 'api')
       }
       if (st === 'COMPLETED' || st === 'FINISHED' || st === 'SUCCEEDED') {
-        const again = await cursorRequest(
+        const again = await cursorRequestWithAuth(
           proxyBase,
           apiKey,
           `/v1/agents/${agentId}/runs/${runId}/stream`,

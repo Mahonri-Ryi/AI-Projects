@@ -97,8 +97,16 @@ export function SleepCoachTab({
                 Test key
               </button>
             </div>
-            {coach.cursorKeyOk && (
-              <p className="coach-hint">Connected: {coach.cursorKeyOk}</p>
+            {coach.keyTest.status === 'checking' && (
+              <p className="coach-hint">{coach.keyTest.message}</p>
+            )}
+            {coach.keyTest.status === 'ok' && (
+              <p className="coach-hint coach-hint--ok">Connected: {coach.keyTest.message}</p>
+            )}
+            {coach.keyTest.status === 'error' && (
+              <p className="coach-error" style={{ marginTop: '0.5rem' }}>
+                {coach.keyTest.message}
+              </p>
             )}
 
             <label className="form-field">
@@ -127,7 +135,7 @@ export function SleepCoachTab({
             </label>
 
             <label className="form-field">
-              <span>Proxy base URL (required on live app)</span>
+              <span>Proxy base URL (required before Test on installed app)</span>
               <input
                 type="url"
                 value={coach.settings.proxyBaseUrl}
@@ -137,10 +145,10 @@ export function SleepCoachTab({
             </label>
             <p className="coach-hint">
               {import.meta.env.DEV
-                ? `Dev: Cursor calls go through ${cursorProxy || '/api/cursor'}.`
-                : cursorProxy
+                ? `Dev: Cursor calls go through ${cursorProxy || '/api/cursor'} — proxy optional.`
+                : coach.settings.proxyBaseUrl.trim()
                   ? `Cursor via: ${cursorProxy}`
-                  : 'Deploy coach-proxy/worker.js and paste its URL here (browser CORS).'}
+                  : 'Paste your Cloudflare Worker URL here first, then Test key.'}
             </p>
 
             <label className="form-field reminder-toggle">
