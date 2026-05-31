@@ -8,25 +8,26 @@ on:
       - '.github/workflows/deploy-baby-sleep.yml'
   workflow_dispatch:
 
+# Deploy to gh-pages branch (works with Settings → Pages → Deploy from branch)
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages-baby-sleep
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: baby-sleep/package-lock.json
+
       - name: Install and build
         working-directory: baby-sleep
         env:
@@ -34,10 +35,12 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Prepare site (app lives at /baby-sleep/ on Pages)
+
+      - name: Prepare site (app at /AI-Projects/baby-sleep/)
         run: |
           mkdir -p _site/baby-sleep
           cp -r baby-sleep/dist/* _site/baby-sleep/
+          touch _site/.nojekyll
           cat > _site/index.html <<'EOF'
           <!DOCTYPE html>
           <html lang="en">
@@ -51,16 +54,11 @@ jobs:
             </body>
           </html>
           EOF
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          force_orphan: true
