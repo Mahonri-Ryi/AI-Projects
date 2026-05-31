@@ -27,6 +27,7 @@ export interface AppState {
   activeChildId: string
   sessions: SleepSession[]
   householdCode: string
+  reminders?: ReminderSettings
 }
 
 export interface ScienceSource {
@@ -57,6 +58,33 @@ export interface NextNapPrediction {
   adjustmentNote?: string
   sources: ScienceSource[]
   adjustmentSources?: ScienceSource[]
+}
+
+export interface BedtimeGuidance {
+  ageLabel: string
+  typicalStartMinutes: number // minutes from local midnight
+  windowStartMinutes: number
+  windowEndMinutes: number
+  lastStretchWakeMinutes: number
+  flexibleSchedule: boolean
+}
+
+export interface NextBedtimePrediction {
+  windowStart: Date
+  windowEnd: Date
+  sweetSpot: Date
+  explanation: string
+  adjustmentNote?: string
+  sources: ScienceSource[]
+  adjustmentSources?: ScienceSource[]
+  learnedFromHistory: boolean
+  flexibleSchedule: boolean
+}
+
+export interface ReminderSettings {
+  enabled: boolean
+  napMinutesBefore: number
+  bedtimeMinutesBefore: number
 }
 
 export interface PatternInsight {

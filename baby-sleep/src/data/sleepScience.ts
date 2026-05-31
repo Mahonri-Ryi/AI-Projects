@@ -1,4 +1,4 @@
-import type { WakeWindowGuidance } from '../types'
+import type { BedtimeGuidance, WakeWindowGuidance } from '../types'
 import { getAllSources } from './researchCatalog'
 
 /**
@@ -179,4 +179,76 @@ export function typicalNapDurationMinutes(ageMonths: number): number {
   if (ageMonths < 9) return 75
   if (ageMonths < 12) return 90
   return 90
+}
+
+/** Typical evening bedtime (local clock) and last wake stretch before bed */
+export function getBedtimeGuidance(birthDate: string, asOf = new Date()): BedtimeGuidance {
+  const months = getAgeInMonths(birthDate, asOf)
+  const band = getBand(months)
+  const flexibleSchedule = months < 3
+
+  const {
+    typicalHour,
+    typicalMinute,
+    windowStartHour,
+    windowEndHour,
+    lastStretchWake,
+  } = (() => {
+    if (months < 1) {
+      return {
+        typicalHour: 21,
+        typicalMinute: 0,
+        windowStartHour: 19,
+        windowEndHour: 23,
+        lastStretchWake: band.wakeMax,
+      }
+    }
+    if (months < 3) {
+      return {
+        typicalHour: 20,
+        typicalMinute: 0,
+        windowStartHour: 18,
+        windowEndHour: 22,
+        lastStretchWake: band.wakeMax,
+      }
+    }
+    if (months < 12) {
+      return {
+        typicalHour: 19,
+        typicalMinute: 30,
+        windowStartHour: 18,
+        windowEndHour: 20,
+        lastStretchWake: band.wakeMax + 15,
+      }
+    }
+    if (months < 24) {
+      return {
+        typicalHour: 19,
+        typicalMinute: 30,
+        windowStartHour: 18,
+        windowEndHour: 20,
+        lastStretchWake: band.wakeMax + 30,
+      }
+    }
+    return {
+      typicalHour: 19,
+      typicalMinute: 30,
+      windowStartHour: 18,
+      windowEndHour: 21,
+      lastStretchWake: Math.min(360, band.wakeMax + 30),
+    }
+  })()
+
+  const typicalStartMinutes = typicalHour * 60 + typicalMinute
+  const windowStartMinutes = windowStartHour * 60
+  const windowEndMinutes = windowEndHour * 60 + 30
+
+  return {
+    ageLabel: band.ageLabel,
+    typicalStartMinutes,
+    windowStartMinutes,
+    windowEndMinutes,
+    lastStretchWakeMinutes: lastStretchWake,
+    flexibleSchedule,
+  }
 }

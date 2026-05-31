@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { parseISO } from 'date-fns'
 import { getWakeWindowGuidance, getAgeInMonths, formatAge } from '../data/sleepScience'
 import {
   getSleepStatus,
   predictNextNap,
+  predictNextBedtime,
+  eveningBedtimeLoggedToday,
   generateId,
   formatDuration,
+  DEFAULT_REMINDER_SETTINGS,
 } from '../lib/sleepLogic'
+import { parseISO } from 'date-fns'
+import { useSleepReminders } from './useSleepReminders'
 import { createDefaultChild, normalizeState, pickChildColor } from '../lib/migrate'
 import { loadStateWithLegacy, saveState } from '../lib/storage'
 import { decodeSyncFromUrl, mergeAppState } from '../lib/sync'
-import type { AppState, ChildProfile, SleepKind } from '../types'
+import type { AppState, ChildProfile, ReminderSettings, SleepKind } from '../types'
 
 function loadInitialState(): AppState {
   const base = loadStateWithLegacy()
@@ -56,6 +60,29 @@ export function useBabySleep() {
         ? predictNextNap(activeChild.birthDate, childSessions, now)
         : null,
     [activeChild, childSessions, now],
+  )
+
+  const bedtimePrediction = useMemo(
+    () =>
+      activeChild?.birthDate
+        ? predictNextBedtime(activeChild.birthDate, childSessions, now)
+        : null,
+    [activeChild, childSessions, now],
+  )
+
+  const nightStartedToday = useMemo(
+    () => eveningBedtimeLoggedToday(childSessions, now),
+    [childSessions, now],
+  )
+
+  const reminders: ReminderSettings = state.reminders ?? { ...DEFAULT_REMINDER_SETTINGS }
+
+  useSleepReminders(
+    activeChild?.name ?? 'Baby',
+    prediction,
+    bedtimePrediction,
+    reminders,
+    now,
   )
 
   const guidance = useMemo(
@@ -191,12 +218,20 @@ export function useBabySleep() {
 
   const needsProfile = !activeChild?.birthDate
 
+  const setReminders = useCallback((next: ReminderSettings) => {
+    setState((s) => ({ ...s, reminders: next }))
+  }, [])
+
   return {
     state,
     activeChild,
     childSessions,
     status,
     prediction,
+    bedtimePrediction,
+    nightStartedToday,
+    reminders,
+    setReminders,
     guidance,
     ageMonths,
     ageLabel,

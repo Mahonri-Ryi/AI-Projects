@@ -71,3 +71,10 @@ export const SOURCES_CIRCADIAN: SourceId[] = ['pediatric-research', 'baby-sleep-
 
 /** Frequent naps in young infants */
 export const SOURCES_NAP_FREQUENCY: SourceId[] = ['pediatric-research', 'nsf']
+
+/** Bedtime consistency & circadian evening rhythm */
+export const SOURCES_BEDTIME: SourceId[] = [
+  'nsf',
+  'pediatric-research',
+  'baby-sleep-science',
+]

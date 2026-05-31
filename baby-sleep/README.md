@@ -1,11 +1,13 @@
 # Little Dream — Baby Sleep Tracker
 
-A mobile-friendly PWA to log naps and bedtime, with **research-based next-nap timing** from your baby’s age.
+A mobile-friendly PWA to log naps and bedtime, with **research-based next-nap and bedtime timing** from your baby’s age.
 
 ## Features
 
 - One-tap **nap** and **bedtime** logging
 - **Next nap window** from age-appropriate wake times (homeostatic sleep pressure + published ranges)
+- **Bedtime window** from age guidance plus your logged bedtime history when available
+- Optional **browser reminders** before nap and bedtime wind-down (Settings)
 - Adjustments when the last nap was unusually short or long
 - **Sleepy cues** reminder and links to sources (NSF, Cleveland Clinic, pediatric sleep literature)
 - **Share link** so your partner can sync profile and history (no account; data stays in the browser)
