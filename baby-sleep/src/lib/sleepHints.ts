@@ -2,6 +2,7 @@ import { differenceInMinutes, parseISO } from 'date-fns'
 import type { SleepHint, SleepSession, WakeWindowGuidance } from '../types'
 import { getTodayStats } from './analytics'
 import { getSleepStatus } from './sleepLogic'
+import { formatDurationWords } from './timeDisplay'
 
 export function generateSleepHints(
   sessions: SleepSession[],
@@ -28,14 +29,14 @@ export function generateSleepHints(
         id: 'overtired',
         severity: 'action',
         title: 'Likely overtired',
-        body: `Awake ${awakeMin}m — past the typical ${guidance.maxMinutes}m window. Prioritize nap or bedtime and watch for fussiness.`,
+        body: `Awake ${formatDurationWords(awakeMin)} — past the typical ${formatDurationWords(guidance.maxMinutes)} window. Prioritize nap or bedtime and watch for fussiness.`,
       })
     } else if (awakeMin > guidance.targetMinutes + 15) {
       hints.push({
         id: 'stretching',
         severity: 'watch',
         title: 'Wake window stretching',
-        body: `Awake ${awakeMin}m. Start wind-down soon if you see sleepy cues.`,
+        body: `Awake ${formatDurationWords(awakeMin)}. Start wind-down soon if you see sleepy cues.`,
       })
     }
   }

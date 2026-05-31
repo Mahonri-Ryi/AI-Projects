@@ -1,4 +1,5 @@
 import { differenceInMinutes, format } from 'date-fns'
+import { formatInUntilWithTime } from './timeDisplay'
 import type {
   GlanceSummary,
   NextBedtimePrediction,
@@ -37,7 +38,10 @@ export function getGlanceSummary(
     if (mins > -30) {
       candidates.push({
         mins,
-        label: mins > 0 ? `Nap wind-down in ~${mins}m` : 'Nap window — wind down now',
+        label:
+          mins > 0
+            ? `Nap wind-down ${formatInUntilWithTime(mins, prediction.sweetSpot)}`
+            : 'Nap window — wind down now',
         kind: 'nap-soon',
       })
     }
@@ -52,7 +56,7 @@ export function getGlanceSummary(
           mins > 60
             ? `Bedtime around ${format(bedtimePrediction.sweetSpot, 'h:mm a')}`
             : mins > 0
-              ? `Bedtime in ~${mins}m`
+              ? `Bedtime ${formatInUntilWithTime(mins, bedtimePrediction.sweetSpot)}`
               : 'Bedtime window now',
         kind: 'bed-soon',
       })

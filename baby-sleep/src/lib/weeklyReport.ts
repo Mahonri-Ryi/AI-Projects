@@ -1,6 +1,7 @@
 import { format, parseISO } from 'date-fns'
 import type { SleepSession, WeeklyReport } from '../types'
 import { getDailySummaries, getPeriodStats } from './analytics'
+import { formatDurationWords } from './timeDisplay'
 
 function medianBedtimeMinutes(sessions: SleepSession[]): number | null {
   const starts = sessions
@@ -53,7 +54,7 @@ export function buildWeeklyReport(sessions: SleepSession[], now = new Date()): W
     bedtimeDrift = bed - prevBed
     if (Math.abs(bedtimeDrift) >= 15) {
       highlights.push(
-        `Bedtime shifted ~${Math.abs(bedtimeDrift)} min ${bedtimeDrift > 0 ? 'later' : 'earlier'} vs. prior week.`,
+        `Bedtime shifted ~${formatDurationWords(Math.abs(bedtimeDrift))} ${bedtimeDrift > 0 ? 'later' : 'earlier'} vs. prior week.`,
       )
     }
   }

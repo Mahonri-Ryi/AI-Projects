@@ -1,5 +1,6 @@
 import { subMinutes } from 'date-fns'
 import type { NextBedtimePrediction, NextNapPrediction, ReminderSettings } from '../types'
+import { formatDurationWords } from './timeDisplay'
 import {
   getNotificationPermission,
   notificationsSupported,
@@ -45,7 +46,7 @@ export function buildDueReminders(
         kind: 'nap',
         fireAt,
         title: `${name}: Nap wind-down soon`,
-        body: `Start calming for nap in about ${settings.napMinutesBefore} minutes — watch sleepy cues.`,
+        body: `Start calming for nap in about ${formatDurationWords(settings.napMinutesBefore)} — watch sleepy cues.`,
         tag: 'little-dream-nap',
       })
     }
@@ -58,7 +59,7 @@ export function buildDueReminders(
         kind: 'bedtime',
         fireAt,
         title: `${name}: Bedtime wind-down soon`,
-        body: `Begin evening routine in about ${settings.bedtimeMinutesBefore} minutes.`,
+        body: `Begin evening routine in about ${formatDurationWords(settings.bedtimeMinutesBefore)}.`,
         tag: 'little-dream-bedtime',
       })
     }
