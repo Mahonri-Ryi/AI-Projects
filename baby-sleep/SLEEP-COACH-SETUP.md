@@ -136,7 +136,8 @@ After the fix PR is merged and GitHub Pages deploys (~2–3 minutes):
 | **“Add proxy URL first”** on Test | Paste Worker URL **before** Test key (required on installed PWA, not in local dev). |
 | **“Connected: Invalid key”** (old build) | Clear cache & reload after the fix PR; update fixes misleading text. |
 | **Key rejected (401)** | Use Dashboard → **API Keys**, not Admin/team keys. |
-| **Could not reach Cursor / network** | Wrong Worker URL, worker not deployed, or typo in URL. |
+| **Could not reach Cursor / network** | Worker URL wrong, or Cloudflare is deploying the **app** instead of **coach-proxy** (see below). |
+| **Proxy URL opens the purple Little Dream app** | Cloudflare Builds **Root directory** must be `baby-sleep/coach-proxy`, not `baby-sleep`. See `coach-proxy/CLOUDFLARE-GIT-SETUP.md`. |
 | **Coach is thinking…** forever | Wait up to ~2 min; try a shorter question; check Cursor dashboard for agent errors or quota. |
 | Chat works on laptop `npm run dev` but not phone | Dev uses built-in proxy; phone needs Worker URL in Setup. |
 
