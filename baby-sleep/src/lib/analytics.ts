@@ -8,6 +8,7 @@ import {
   startOfDay,
   subDays,
 } from 'date-fns'
+import { formatDurationWords } from './timeDisplay'
 import {
   getSources,
   SOURCES_CIRCADIAN,
@@ -231,7 +232,7 @@ export function generateInsights(
       id: 'variance',
       type: 'tip',
       title: 'Day-to-day variability',
-      body: `Sleep ranged from ${formatHours(worstDay.totalMinutes)} on ${worstDay.label} to ${formatHours(bestDay.totalMinutes)} on ${bestDay.label}. Consistency often improves as circadian rhythm matures.`,
+      body: `Sleep ranged from ${formatDurationWords(worstDay.totalMinutes)} on ${worstDay.label} to ${formatDurationWords(bestDay.totalMinutes)} on ${bestDay.label}. Consistency often improves as circadian rhythm matures.`,
       sources: getSources(SOURCES_CIRCADIAN),
     })
   }
@@ -249,12 +250,7 @@ export function generateInsights(
   return insights.slice(0, 4)
 }
 
-export function formatHours(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
-}
+export { formatDurationWords as formatHours } from './timeDisplay'
 
 /** Hour blocks for 24h day timeline (0-23) */
 export interface TimelineBlock {

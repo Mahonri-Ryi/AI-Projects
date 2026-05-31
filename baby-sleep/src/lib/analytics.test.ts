@@ -88,6 +88,6 @@ describe('getDayTimeline', () => {
 
 describe('formatHours', () => {
   it('formats hours and minutes', () => {
-    expect(formatHours(90)).toBe('1h 30m')
+    expect(formatHours(90)).toBe('1 hr 30 min')
   })
 })

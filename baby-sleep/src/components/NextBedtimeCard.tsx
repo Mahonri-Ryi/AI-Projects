@@ -1,5 +1,6 @@
 import { differenceInMinutes, format } from 'date-fns'
 import type { NextBedtimePrediction, SleepStatus } from '../types'
+import { formatInUntilWithTime } from '../lib/timeDisplay'
 import { travelBedtimeNote } from '../lib/travelMode'
 import { Card } from './ui/Card'
 import { ResearchLinks } from './ui/ResearchLinks'
@@ -71,7 +72,7 @@ export function NextBedtimeCard({
   if (minsToSweet > 60) {
     countdownText = `Tonight's wind-down around ${format(prediction.sweetSpot, 'h:mm a')}`
   } else if (minsToSweet > 10) {
-    countdownText = `Begin wind-down in ~${minsToSweet} min`
+    countdownText = `Begin wind-down ${formatInUntilWithTime(minsToSweet, prediction.sweetSpot)}`
   } else if (minsToSweet > -20) {
     countdownClass = 'soon'
     countdownText =
@@ -119,7 +120,7 @@ export function NextBedtimeCard({
 
       {minsToWindowStart > 0 && minsToSweet > 60 && (
         <p style={{ fontSize: '0.8rem', textAlign: 'center', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-          Window opens in ~{minsToWindowStart} min
+          Window opens {formatInUntilWithTime(minsToWindowStart, prediction.windowStart)}
         </p>
       )}
 
