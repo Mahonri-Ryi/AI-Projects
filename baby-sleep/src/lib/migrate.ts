@@ -1,5 +1,5 @@
-import type { AppState, ChildProfile, SleepSession } from '../types'
-import { generateId } from './sleepLogic'
+import type { AppState, ChildProfile, ReminderSettings, SleepSession } from '../types'
+import { DEFAULT_REMINDER_SETTINGS, generateId } from './sleepLogic'
 
 export const CHILD_COLORS = [
   '#4f46e5',
@@ -24,6 +24,7 @@ interface LegacyStateV1 {
   v?: number
   children?: ChildProfile[]
   activeChildId?: string
+  reminders?: ReminderSettings
 }
 
 function isV2Payload(parsed: LegacyStateV1): boolean {
@@ -67,6 +68,7 @@ export function normalizeState(raw: unknown): AppState {
         childId: s.childId || activeChildId,
       })),
       householdCode: parsed.householdCode ?? '',
+      reminders: normalizeReminders(parsed.reminders),
     }
   }
 
@@ -88,6 +90,17 @@ export function normalizeState(raw: unknown): AppState {
     activeChildId: child.id,
     sessions,
     householdCode: parsed?.householdCode ?? '',
+    reminders: normalizeReminders(parsed?.reminders),
+  }
+}
+
+function normalizeReminders(raw?: ReminderSettings): ReminderSettings {
+  if (!raw) return { ...DEFAULT_REMINDER_SETTINGS }
+  return {
+    enabled: Boolean(raw.enabled),
+    napMinutesBefore: raw.napMinutesBefore ?? DEFAULT_REMINDER_SETTINGS.napMinutesBefore,
+    bedtimeMinutesBefore:
+      raw.bedtimeMinutesBefore ?? DEFAULT_REMINDER_SETTINGS.bedtimeMinutesBefore,
   }
 }
 

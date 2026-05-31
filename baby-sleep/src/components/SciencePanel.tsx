@@ -45,6 +45,12 @@ export function SciencePanel({ guidance, ageLabel }: Props) {
             <li>Adjustments for unusually short or long prior naps</li>
             <li>Daytime sleep deficit may suggest earlier naps</li>
           </ul>
+          <h3>Bedtime algorithm</h3>
+          <ul>
+            <li>Age-typical evening bedtime ranges</li>
+            <li>Your logged bedtime history when available</li>
+            <li>Last wake stretch before bed, with short/long nap adjustments</li>
+          </ul>
           <h3>Peer-reviewed sources</h3>
           <ul>
             {guidance.sources.map((s) => (

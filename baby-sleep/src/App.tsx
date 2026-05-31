@@ -5,6 +5,8 @@ import { AppShell, type AppTab } from './components/layout/AppShell'
 import { ChildrenManager } from './components/ChildrenManager'
 import { StatusHero } from './components/StatusHero'
 import { NextNapCard } from './components/NextNapCard'
+import { NextBedtimeCard } from './components/NextBedtimeCard'
+import { ReminderSettings } from './components/ReminderSettings'
 import { ActionButtons } from './components/ActionButtons'
 import { SleepLog } from './components/SleepLog'
 import { SciencePanel } from './components/SciencePanel'
@@ -26,6 +28,10 @@ function App() {
     childSessions,
     status,
     prediction,
+    bedtimePrediction,
+    nightStartedToday,
+    reminders,
+    setReminders,
     guidance,
     ageLabel,
     awakeMinutes,
@@ -100,6 +106,12 @@ function App() {
                 awakeMinutes={awakeMinutes}
                 now={now}
               />
+              <NextBedtimeCard
+                prediction={bedtimePrediction}
+                status={status}
+                now={now}
+                nightStartedToday={nightStartedToday}
+              />
               <ActionButtons status={status} onStart={startSleep} onEnd={endSleep} />
               {guidance && !needsProfile && (
                 <div className="guide-chip" style={{ width: '100%' }}>
@@ -126,6 +138,7 @@ function App() {
           {tab === 'settings' && (
             <>
               <ThemeSettings preference={preference} onChange={setTheme} />
+              <ReminderSettings settings={reminders} onChange={setReminders} />
               <ChildrenManager
                 children={state.children}
                 activeChildId={state.activeChildId}

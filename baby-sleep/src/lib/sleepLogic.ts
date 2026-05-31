@@ -1,15 +1,29 @@
-import { differenceInMinutes, addMinutes, parseISO, isSameDay } from 'date-fns'
+import {
+  differenceInMinutes,
+  addMinutes,
+  parseISO,
+  isSameDay,
+  startOfDay,
+  setHours,
+  setMinutes,
+  subDays,
+  subMinutes,
+  max,
+} from 'date-fns'
 import {
   getSources,
+  SOURCES_BEDTIME,
   SOURCES_SHORT_NAP,
   SOURCES_WAKE_WINDOWS,
 } from '../data/researchCatalog'
 import {
   getAgeInMonths,
+  getBedtimeGuidance,
   getWakeWindowGuidance,
   typicalNapDurationMinutes,
 } from '../data/sleepScience'
 import type {
+  NextBedtimePrediction,
   NextNapPrediction,
   SleepSession,
   SleepStatus,
@@ -148,6 +162,136 @@ export function predictNextNap(
     adjustmentSources: usedShortNapSources ? getSources(SOURCES_SHORT_NAP) : undefined,
   }
 }
+
+function minutesSinceMidnight(d: Date): number {
+  return d.getHours() * 60 + d.getMinutes()
+}
+
+function dateAtMinutesFromMidnight(day: Date, totalMinutes: number): Date {
+  const h = Math.floor(totalMinutes / 60) % 24
+  const m = totalMinutes % 60
+  return setMinutes(setHours(startOfDay(day), h), m)
+}
+
+/** Median local start time of logged night sleep (last 14 days). */
+export function medianNightStartMinutes(
+  sessions: SleepSession[],
+  now = new Date(),
+  lookbackDays = 14,
+): number | null {
+  const cutoff = subDays(now, lookbackDays)
+  const starts = sessions
+    .filter((s) => s.kind === 'night' && parseISO(s.start) >= cutoff)
+    .map((s) => minutesSinceMidnight(parseISO(s.start)))
+
+  if (starts.length < 2) return null
+  starts.sort((a, b) => a - b)
+  return starts[Math.floor(starts.length / 2)]
+}
+
+/** Evening bedtime already logged today (not early-morning night sleep). */
+export function eveningBedtimeLoggedToday(sessions: SleepSession[], now: Date): boolean {
+  return sessions.some((s) => {
+    if (s.kind !== 'night') return false
+    const start = parseISO(s.start)
+    if (!isSameDay(start, now)) return false
+    if (s.end === null) return true
+    return start.getHours() >= 17
+  })
+}
+
+export function predictNextBedtime(
+  birthDate: string,
+  sessions: SleepSession[],
+  now = new Date(),
+): NextBedtimePrediction | null {
+  const status = getSleepStatus(sessions)
+  const guidance = getBedtimeGuidance(birthDate, now)
+
+  if (status.isAsleep) {
+    return null
+  }
+
+  if (eveningBedtimeLoggedToday(sessions, now)) {
+    return null
+  }
+
+  const learnedMedian = medianNightStartMinutes(sessions, now)
+  let targetMinutes = guidance.typicalStartMinutes
+  let learnedFromHistory = false
+
+  if (learnedMedian !== null) {
+    targetMinutes = Math.round(guidance.typicalStartMinutes * 0.35 + learnedMedian * 0.65)
+    learnedFromHistory = true
+  }
+
+  let sweetSpot = dateAtMinutesFromMidnight(now, targetMinutes)
+  let adjustmentNote: string | undefined
+  let adjustmentSources: ReturnType<typeof getSources> | undefined
+
+  if (status.awakeSince) {
+    const sorted = [...sessions]
+      .filter((s) => s.end)
+      .sort((a, b) => parseISO(b.end!).getTime() - parseISO(a.end!).getTime())
+    const last = sorted[0]
+    const lastDur = last ? sessionDurationMinutes(last) : null
+    const ageMonths = getAgeInMonths(birthDate, now)
+    const typicalNap = typicalNapDurationMinutes(ageMonths)
+
+    let stretch = guidance.lastStretchWakeMinutes
+    if (last?.kind === 'nap' && lastDur !== null && lastDur < typicalNap * 0.5) {
+      stretch = Math.max(45, stretch - 20)
+      adjustmentNote =
+        'Last nap was short — an earlier bedtime may help make up for lost daytime sleep.'
+      adjustmentSources = getSources(SOURCES_SHORT_NAP)
+    } else if (last?.kind === 'nap' && lastDur !== null && lastDur > typicalNap * 1.4) {
+      stretch = stretch + 15
+      adjustmentNote =
+        'Last nap was long — baby may handle a slightly later bedtime if cues are good.'
+      adjustmentSources = getSources(SOURCES_SHORT_NAP)
+    }
+
+    const wakeBased = addMinutes(status.awakeSince, stretch)
+    if (wakeBased > sweetSpot || now.getHours() >= 15) {
+      sweetSpot = wakeBased > sweetSpot ? wakeBased : sweetSpot
+    }
+  }
+
+  const windowStart = max([
+    dateAtMinutesFromMidnight(now, guidance.windowStartMinutes),
+    subMinutes(sweetSpot, 45),
+  ])
+  const windowEnd = max([
+    dateAtMinutesFromMidnight(now, guidance.windowEndMinutes),
+    addMinutes(sweetSpot, 30),
+  ])
+
+  const historyNote = learnedFromHistory
+    ? ' Blends your recent logged bedtimes with age-typical evening sleep.'
+    : ''
+
+  const explanation = guidance.flexibleSchedule
+    ? `Newborns often have flexible evening sleep. When cues appear, aim for a calm wind-down in the window below. As circadian rhythm matures (~3–4 months), a more consistent bedtime helps.${historyNote}`
+    : `Evening sleep works best with a fairly consistent bedtime. We suggest wind-down in the window below — watch sleepy cues and adjust for your baby.${historyNote}`
+
+  return {
+    windowStart,
+    windowEnd: max([windowEnd, addMinutes(sweetSpot, 15)]),
+    sweetSpot,
+    explanation,
+    adjustmentNote,
+    adjustmentSources,
+    sources: getSources(SOURCES_BEDTIME),
+    learnedFromHistory,
+    flexibleSchedule: guidance.flexibleSchedule,
+  }
+}
+
+export const DEFAULT_REMINDER_SETTINGS = {
+  enabled: false,
+  napMinutesBefore: 10,
+  bedtimeMinutesBefore: 15,
+} as const
 
 export function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60)
