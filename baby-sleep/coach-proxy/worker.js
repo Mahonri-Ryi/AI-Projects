@@ -15,15 +15,32 @@ export default {
       return new Response(null, { headers: cors })
     }
 
+    const url = new URL(request.url)
     const auth = request.headers.get('Authorization')
-    if (!auth) {
-      return new Response(JSON.stringify({ error: { message: 'Missing Authorization' } }), {
-        status: 401,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
+
+    if (!auth && (url.pathname === '/' || url.pathname === '')) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          service: 'Little Dream Sleep Coach proxy',
+          hint: 'Do not open this in a browser for chat. In the app: Coach → Setup → Proxy URL + crsr_ key → Test key.',
+        }),
+        { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
+      )
     }
 
-    const url = new URL(request.url)
+    if (!auth) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message: 'Missing Authorization',
+            hint: 'Only the Little Dream app (or curl with Authorization) should call this proxy.',
+          },
+        }),
+        { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } },
+      )
+    }
+
     let target
 
     if (url.pathname.startsWith('/cursor/')) {

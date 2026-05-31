@@ -84,6 +84,18 @@ curl -sS -H "Authorization: Bearer YOUR_KEY" \
 
 You should get JSON back (email or account info), not HTML or 401.
 
+### 2.5 “Missing Authorization” in the Cloudflare preview?
+
+If you click **Visit** or open your Worker URL in a browser, you may see:
+
+```json
+{"error":{"message":"Missing Authorization"}}
+```
+
+That is **normal**. The browser does not send your Cursor API key. The proxy is working; only the **Little Dream app** (or the `curl` test above) should call it with `Authorization`.
+
+After updating the worker script, visiting the root URL may show a green `ok: true` health message instead.
+
 ---
 
 ## Part 3 — Configure Little Dream on your phone
