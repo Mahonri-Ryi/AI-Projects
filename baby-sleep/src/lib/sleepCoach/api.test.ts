@@ -1,16 +1,30 @@
 import { describe, expect, it } from 'vitest'
-import { CoachApiError, resolveCoachApiBase, sendCoachChat } from './api'
+import { CoachApiError, sendCoachChat } from './api'
+import { parseCursorStreamBody } from './cursorCoach'
 import type { SleepCoachSettings } from './types'
 import { DEFAULT_COACH_SETTINGS } from './types'
 
+describe('parseCursorStreamBody', () => {
+  it('reads result event', () => {
+    const body = [
+      '{"type":"assistant","timestamp_ms":1,"message":{"content":[{"type":"text","text":"Hi"}]}}',
+      '{"type":"result","subtype":"success","result":"Hello parent!"}',
+    ].join('\n')
+    expect(parseCursorStreamBody(body)).toBe('Hello parent!')
+  })
+})
+
 describe('sendCoachChat', () => {
-  it('rejects cursor keys for chat', async () => {
+  it('requires proxy for openai when not in dev', async () => {
     const settings: SleepCoachSettings = {
       ...DEFAULT_COACH_SETTINGS,
-      apiKey: 'crsr_test_key_12345678901234567890123456789012',
-      provider: 'cursor',
-      proxyBaseUrl: 'https://proxy.example.com',
+      provider: 'openai',
+      apiKey: 'sk-test',
+      proxyBaseUrl: '',
     }
+    const base = import.meta.env.DEV ? 'skip' : ''
+    if (base === 'skip') return
+
     try {
       await sendCoachChat({
         settings,
@@ -20,24 +34,7 @@ describe('sendCoachChat', () => {
       expect.fail('expected error')
     } catch (e) {
       expect(e).toBeInstanceOf(CoachApiError)
-      expect((e as CoachApiError).code).toBe('cursor_unsupported')
+      expect((e as CoachApiError).code).toBe('proxy')
     }
-  })
-
-  it('requires proxy when not in dev', async () => {
-    const settings: SleepCoachSettings = {
-      ...DEFAULT_COACH_SETTINGS,
-      apiKey: 'sk-test',
-      proxyBaseUrl: '',
-    }
-    const base = resolveCoachApiBase(settings)
-    if (base) return
-    await expect(
-      sendCoachChat({
-        settings,
-        messages: [{ role: 'user', content: 'Hi' }],
-        systemPrompt: 'test',
-      }),
-    ).rejects.toMatchObject({ code: 'proxy' })
   })
 })

@@ -58,7 +58,15 @@ export function useSleepCoach({
       settings: {
         ...s.settings,
         apiKey,
-        provider: detected ?? s.settings.provider,
+        provider: detected ?? 'cursor',
+        model:
+          detected === 'openai'
+            ? s.settings.model === 'composer-2'
+              ? 'gpt-4o-mini'
+              : s.settings.model
+            : detected === 'cursor' && s.settings.model === 'gpt-4o-mini'
+              ? 'composer-2'
+              : s.settings.model,
       },
     }))
     setCursorKeyOk(null)
@@ -78,9 +86,9 @@ export function useSleepCoach({
       setCursorKeyOk(null)
       return
     }
-    const result = await validateCursorApiKey(key)
+    const result = await validateCursorApiKey(key, state.settings.proxyBaseUrl)
     setCursorKeyOk(result.ok ? (result.label ?? 'Valid') : 'Invalid key')
-  }, [state.settings.apiKey])
+  }, [state.settings.apiKey, state.settings.proxyBaseUrl])
 
   const selectThread = useCallback((threadId: string) => {
     setState((s) => ({ ...s, activeThreadId: threadId }))
@@ -152,14 +160,18 @@ export function useSleepCoach({
               )
             : undefined
 
-        const { content } = await sendCoachChat({
+        const result = await sendCoachChat({
           settings: state.settings,
           messages: updated.messages.filter((m) => m.role !== 'system'),
           systemPrompt: buildCoachSystemPrompt(),
           contextBlock,
+          cursorAgentId: thread.cursorAgentId,
         })
 
-        updated = appendMessage(updated, 'assistant', content)
+        updated = appendMessage(updated, 'assistant', result.content)
+        if (result.cursorAgentId) {
+          updated = { ...updated, cursorAgentId: result.cursorAgentId }
+        }
         setState((s) => ({
           ...s,
           threads: s.threads.map((t) => (t.id === updated.id ? updated : t)),

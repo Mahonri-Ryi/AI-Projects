@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ChildProfile, DayMarker, SleepSession, WakeWindowGuidance } from '../types'
 import { useSleepCoach } from '../hooks/useSleepCoach'
-import { resolveCoachApiBase } from '../lib/sleepCoach/api'
+import { resolveCursorProxyBase } from '../lib/sleepCoach/cursorCoach'
 import { detectProviderFromKey } from '../lib/sleepCoach/storage'
 import { Card } from './ui/Card'
 
@@ -30,7 +30,7 @@ export function SleepCoachTab({
     now,
   })
 
-  const proxyBase = resolveCoachApiBase(coach.settings)
+  const cursorProxy = resolveCursorProxyBase(coach.settings)
   const hasKey = Boolean(coach.settings.apiKey.trim())
   const keyKind = detectProviderFromKey(coach.settings.apiKey)
 
@@ -53,7 +53,7 @@ export function SleepCoachTab({
     <div className="coach-page">
       <Card
         title="Sleep Coach"
-        subtitle="Educational guidance — not medical advice"
+        subtitle="Uses your Cursor account via your API key"
         action={
           <button
             type="button"
@@ -65,19 +65,22 @@ export function SleepCoachTab({
         }
       >
         <p className="prose coach-intro">
-          Bring your own <strong>OpenAI API key</strong> (<code>sk-…</code>). It stays on this device
-          only. Cursor dashboard keys (<code>crsr_…</code>) are for coding agents, not this chat — use
-          the same OpenAI key you may have in Cursor under Settings → Models.
+          Paste your <strong>Cursor API key</strong> (<code>crsr_…</code> from{' '}
+          <a href="https://cursor.com/dashboard" target="_blank" rel="noopener noreferrer">
+            cursor.com/dashboard
+          </a>
+          {' '}→ API Keys). Questions run on <strong>your Cursor account</strong> (Cloud Agents usage).
+          The key stays on this device only.
         </p>
 
         {showSettings && (
           <div className="coach-settings">
             <label className="form-field">
-              <span>API key</span>
+              <span>Cursor API key</span>
               <input
                 type="password"
                 autoComplete="off"
-                placeholder="sk-… (OpenAI, recommended)"
+                placeholder="crsr_…"
                 value={coach.settings.apiKey}
                 onChange={(e) => coach.setApiKey(e.target.value)}
               />
@@ -86,35 +89,45 @@ export function SleepCoachTab({
               <button type="button" className="btn btn--ghost btn--compact" onClick={coach.clearApiKey}>
                 Clear key
               </button>
-              {keyKind === 'cursor' && (
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--compact"
-                  onClick={() => void coach.checkCursorKey()}
-                >
-                  Test Cursor key
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn btn--ghost btn--compact"
+                onClick={() => void coach.checkCursorKey()}
+              >
+                Test key
+              </button>
             </div>
             {coach.cursorKeyOk && (
-              <p className="coach-hint">
-                Cursor key: {coach.cursorKeyOk}. Sleep Coach still needs an OpenAI <code>sk-</code> key
-                to answer questions.
-              </p>
+              <p className="coach-hint">Connected: {coach.cursorKeyOk}</p>
             )}
 
             <label className="form-field">
-              <span>Model</span>
+              <span>Cursor model id</span>
               <input
                 type="text"
                 value={coach.settings.model}
                 onChange={(e) => coach.updateSettings({ model: e.target.value })}
-                placeholder="gpt-4o-mini"
+                placeholder="composer-2"
               />
             </label>
 
             <label className="form-field">
-              <span>Proxy base URL (production)</span>
+              <span>Provider (advanced)</span>
+              <select
+                value={coach.settings.provider}
+                onChange={(e) =>
+                  coach.updateSettings({
+                    provider: e.target.value as 'cursor' | 'openai',
+                  })
+                }
+              >
+                <option value="cursor">Cursor (crsr_ key)</option>
+                <option value="openai">OpenAI (sk- key)</option>
+              </select>
+            </label>
+
+            <label className="form-field">
+              <span>Proxy base URL (required on live app)</span>
               <input
                 type="url"
                 value={coach.settings.proxyBaseUrl}
@@ -124,10 +137,10 @@ export function SleepCoachTab({
             </label>
             <p className="coach-hint">
               {import.meta.env.DEV
-                ? 'Dev: using /api/coach proxy automatically.'
-                : proxyBase
-                  ? `Using proxy: ${proxyBase}`
-                  : 'Live app needs a proxy URL (see coach-proxy/README).'}
+                ? `Dev: Cursor calls go through ${cursorProxy || '/api/cursor'}.`
+                : cursorProxy
+                  ? `Cursor via: ${cursorProxy}`
+                  : 'Deploy coach-proxy/worker.js and paste its URL here (browser CORS).'}
             </p>
 
             <label className="form-field reminder-toggle">
@@ -155,7 +168,15 @@ export function SleepCoachTab({
         )}
 
         {!hasKey && (
-          <p className="coach-hint coach-hint--warn">Open Setup and add an OpenAI API key to ask questions.</p>
+          <p className="coach-hint coach-hint--warn">
+            Open Setup and add your Cursor API key to start.
+          </p>
+        )}
+        {keyKind === 'openai' && hasKey && (
+          <p className="coach-hint">
+            OpenAI key detected — switch Provider to OpenAI in Setup, or use a Cursor <code>crsr_</code>{' '}
+            key.
+          </p>
         )}
       </Card>
 
@@ -179,10 +200,7 @@ export function SleepCoachTab({
       <div className="coach-chat" role="log" aria-live="polite">
         {coach.activeThread?.messages.length ? (
           coach.activeThread.messages.map((m) => (
-            <div
-              key={m.id}
-              className={`coach-bubble coach-bubble--${m.role}`}
-            >
+            <div key={m.id} className={`coach-bubble coach-bubble--${m.role}`}>
               <span className="coach-bubble__role">{m.role === 'user' ? 'You' : 'Coach'}</span>
               <p>{m.content}</p>
             </div>
@@ -193,7 +211,9 @@ export function SleepCoachTab({
             should I watch?”
           </p>
         )}
-        {coach.sending && <p className="coach-typing">Coach is thinking…</p>}
+        {coach.sending && (
+          <p className="coach-typing">Coach is thinking… (may take up to a minute on Cursor)</p>
+        )}
         {coach.error && <p className="coach-error">{coach.error}</p>}
       </div>
 

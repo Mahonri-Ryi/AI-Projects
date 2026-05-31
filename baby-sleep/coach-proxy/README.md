@@ -1,22 +1,28 @@
-# Sleep Coach proxy (optional)
+# Sleep Coach proxy (required for live app)
 
-Browsers cannot call `api.openai.com` directly (CORS). Sleep Coach uses **your OpenAI API key** on-device and sends requests through a tiny proxy you control.
+Browsers block direct calls to `api.cursor.com` and `api.openai.com` (CORS). Sleep Coach sends your **API key from the phone** through a tiny proxy you deploy.
 
-Cursor API keys (`crsr_…`) are **not** supported for chat — they are for [Cloud Agents](https://cursor.com/docs/cloud-agent/api/endpoints), not parent Q&A.
+## Cursor API key (recommended)
 
-## Cloudflare Worker (recommended)
+1. Create a key at [cursor.com/dashboard](https://cursor.com/dashboard) → **API Keys** (`crsr_…`).
+2. Deploy this Worker (Cloudflare dashboard → paste `worker.js`).
+3. In the app: **Coach → Setup** → paste key + Worker URL (e.g. `https://little-dream-coach.you.workers.dev`).
 
-1. Create a Worker in the Cloudflare dashboard.
-2. Paste `worker.js` from this folder.
-3. Deploy and copy the URL (e.g. `https://little-dream-coach.your-subdomain.workers.dev`).
-4. In the app: **Coach → Settings → Proxy base URL** → paste that URL (no trailing slash).
+The worker forwards `/cursor/*` to Cursor and does **not** store keys.
 
-The worker forwards to OpenAI and does **not** store your key.
+## OpenAI (optional)
+
+Same worker forwards non-`/cursor` paths to OpenAI if you switch Provider to OpenAI and use an `sk-…` key.
 
 ## Local development
 
-`npm run dev` uses Vite’s `/api/coach` proxy automatically — only your OpenAI key is required.
+`npm run dev` proxies automatically:
+
+- `/api/cursor` → Cursor API  
+- `/api/coach` → OpenAI API  
+
+Only your API key is required in Setup.
 
 ## Build-time default proxy
 
-Set `VITE_SLEEP_COACH_PROXY=https://your-worker.workers.dev` when building if you host a shared proxy for all users (you pay bandwidth; users still bring their own OpenAI keys).
+`VITE_SLEEP_COACH_PROXY=https://your-worker.workers.dev` when building the PWA.

@@ -15,6 +15,8 @@ export interface CoachThread {
   title: string
   messages: CoachMessage[]
   updatedAt: string
+  /** Cursor Cloud Agent id for follow-up messages in this thread */
+  cursorAgentId?: string
 }
 
 export interface SleepCoachSettings {
@@ -35,9 +37,9 @@ export interface SleepCoachState {
 }
 
 export const DEFAULT_COACH_SETTINGS: SleepCoachSettings = {
-  provider: 'openai',
+  provider: 'cursor',
   apiKey: '',
   proxyBaseUrl: '',
   includeLogContext: true,
-  model: 'gpt-4o-mini',
+  model: 'composer-2',
 }

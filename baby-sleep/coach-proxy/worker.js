@@ -1,11 +1,11 @@
 /**
- * Optional CORS proxy for Little Dream Sleep Coach.
- * Deploy to Cloudflare Workers; users paste the worker URL in app settings.
- * Does not log or store API keys.
+ * CORS proxy for Little Dream Sleep Coach.
+ * - /cursor/*  → api.cursor.com (Cursor API key in Authorization header)
+ * - /*         → api.openai.com (OpenAI key, legacy path)
  */
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 }
 
@@ -15,14 +15,6 @@ export default {
       return new Response(null, { headers: cors })
     }
 
-    if (request.method !== 'POST') {
-      return new Response('POST only', { status: 405, headers: cors })
-    }
-
-    const url = new URL(request.url)
-    const path = url.pathname.replace(/^\//, '')
-    const target = `https://api.openai.com/${path || 'v1/chat/completions'}`
-
     const auth = request.headers.get('Authorization')
     if (!auth) {
       return new Response(JSON.stringify({ error: { message: 'Missing Authorization' } }), {
@@ -31,13 +23,26 @@ export default {
       })
     }
 
+    const url = new URL(request.url)
+    let target
+
+    if (url.pathname.startsWith('/cursor/')) {
+      const path = url.pathname.replace(/^\/cursor/, '') || '/'
+      target = `https://api.cursor.com${path}${url.search}`
+    } else {
+      const path = url.pathname.replace(/^\//, '')
+      target = `https://api.openai.com/${path || 'v1/chat/completions'}${url.search}`
+    }
+
+    const headers = {
+      Authorization: auth,
+      'Content-Type': request.headers.get('Content-Type') || 'application/json',
+    }
+
     const res = await fetch(target, {
-      method: 'POST',
-      headers: {
-        Authorization: auth,
-        'Content-Type': 'application/json',
-      },
-      body: request.body,
+      method: request.method,
+      headers: request.method === 'GET' ? { Authorization: auth } : headers,
+      body: request.method === 'GET' ? undefined : request.body,
     })
 
     return new Response(res.body, {

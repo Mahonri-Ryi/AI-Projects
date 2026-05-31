@@ -1,3 +1,4 @@
+import { sendCursorCoachChat } from './cursorCoach'
 import type { CoachMessage, CoachProvider, SleepCoachSettings } from './types'
 
 export interface CoachChatRequest {
@@ -5,15 +6,16 @@ export interface CoachChatRequest {
   messages: Pick<CoachMessage, 'role' | 'content'>[]
   systemPrompt: string
   contextBlock?: string
+  cursorAgentId?: string
 }
 
 export interface CoachChatResult {
   content: string
+  cursorAgentId?: string
 }
 
 export type CoachApiErrorCode =
   | 'missing_key'
-  | 'cursor_unsupported'
   | 'network'
   | 'api'
   | 'proxy'
@@ -40,47 +42,39 @@ export function resolveCoachApiBase(settings: SleepCoachSettings): string {
   return ''
 }
 
-export async function validateCursorApiKey(apiKey: string): Promise<{ ok: boolean; label?: string }> {
-  const key = apiKey.trim()
-  if (!key) return { ok: false }
+export { validateCursorApiKey } from './cursorAuth'
 
-  try {
-    const res = await fetch('https://api.cursor.com/v1/me', {
-      headers: {
-        Authorization: `Bearer ${key}`,
-      },
-    })
-    if (!res.ok) return { ok: false }
-    const data = (await res.json()) as { email?: string; name?: string }
-    const label = data.email ?? data.name ?? 'Cursor account'
-    return { ok: true, label }
-  } catch {
-    return { ok: false }
-  }
+function resolveProvider(settings: SleepCoachSettings, apiKey: string): CoachProvider {
+  if (settings.provider === 'cursor' || apiKey.startsWith('crsr_')) return 'cursor'
+  if (settings.provider === 'openai' || apiKey.startsWith('sk-')) return 'openai'
+  return settings.provider
 }
 
 export async function sendCoachChat(req: CoachChatRequest): Promise<CoachChatResult> {
   const key = req.settings.apiKey.trim()
   if (!key) {
-    throw new CoachApiError('Add your API key in Coach settings.', 'missing_key')
+    throw new CoachApiError('Add your Cursor API key in Coach setup.', 'missing_key')
   }
 
-  const provider: CoachProvider =
-    req.settings.provider === 'cursor' || key.startsWith('crsr_')
-      ? 'cursor'
-      : 'openai'
+  const provider = resolveProvider(req.settings, key)
 
   if (provider === 'cursor') {
-    throw new CoachApiError(
-      'Cursor API keys (crsr_…) are for Cloud Agents and the IDE, not parent Q&A chat. Use an OpenAI API key (sk-…) for Sleep Coach, or add the same OpenAI key you use under Cursor Settings → Models.',
-      'cursor_unsupported',
-    )
+    const result = await sendCursorCoachChat({
+      apiKey: key,
+      proxyBaseUrl: req.settings.proxyBaseUrl,
+      model: req.settings.model,
+      systemPrompt: req.systemPrompt,
+      contextBlock: req.contextBlock,
+      messages: req.messages,
+      cursorAgentId: req.cursorAgentId,
+    })
+    return { content: result.content, cursorAgentId: result.cursorAgentId }
   }
 
   const base = resolveCoachApiBase(req.settings)
   if (!base) {
     throw new CoachApiError(
-      'A proxy URL is required on the live app (browsers block direct OpenAI calls). Add a proxy in Coach settings, or set VITE_SLEEP_COACH_PROXY at build time. See coach-proxy/README in the repo.',
+      'A proxy URL is required on the live app (browsers block direct OpenAI calls). Add a proxy in Coach settings, or set VITE_SLEEP_COACH_PROXY at build time.',
       'proxy',
     )
   }
@@ -113,10 +107,7 @@ export async function sendCoachChat(req: CoachChatRequest): Promise<CoachChatRes
       body: JSON.stringify(body),
     })
   } catch {
-    throw new CoachApiError(
-      'Network error. Check your connection and proxy URL.',
-      'network',
-    )
+    throw new CoachApiError('Network error. Check your connection and proxy URL.', 'network')
   }
 
   if (!res.ok) {

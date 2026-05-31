@@ -20,6 +20,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/coach/, ''),
       },
+      '/api/cursor': {
+        target: 'https://api.cursor.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/cursor/, ''),
+      },
     },
   },
   plugins: [
