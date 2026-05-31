@@ -104,6 +104,7 @@ function App() {
                 asleepMinutes={asleepMinutes}
                 formatDuration={formatDuration}
               />
+              <ActionButtons status={status} onStart={startSleep} onEnd={endSleep} />
               <DashboardStats sessions={childSessions} guidance={guidance} now={now} />
               <NextNapCard
                 prediction={prediction}
@@ -118,7 +119,6 @@ function App() {
                 now={now}
                 nightStartedToday={nightStartedToday}
               />
-              <ActionButtons status={status} onStart={startSleep} onEnd={endSleep} />
               {guidance && !needsProfile && (
                 <div className="guide-chip" style={{ width: '100%' }}>
                   <p style={{ margin: 0, textAlign: 'center' }}>
