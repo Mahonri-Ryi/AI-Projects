@@ -34,9 +34,26 @@ jobs:
         run: |
           npm ci
           npm run build
+      - name: Prepare site (app lives at /baby-sleep/ on Pages)
+        run: |
+          mkdir -p _site/baby-sleep
+          cp -r baby-sleep/dist/* _site/baby-sleep/
+          cat > _site/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8" />
+              <meta http-equiv="refresh" content="0; url=baby-sleep/" />
+              <title>AI-Projects</title>
+            </head>
+            <body>
+              <p><a href="baby-sleep/">Little Dream — Baby Sleep Tracker</a></p>
+            </body>
+          </html>
+          EOF
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: baby-sleep/dist
+          path: _site
 
   deploy:
     needs: build
