@@ -13,6 +13,7 @@ import {
   loadSleepCoachState,
   saveSleepCoachState,
 } from '../lib/sleepCoach/storage'
+import { normalizeProxyBaseUrl } from '../lib/sleepCoach/proxyUrl'
 import type { SleepCoachSettings, SleepCoachState } from '../lib/sleepCoach/types'
 
 interface UseSleepCoachArgs {
@@ -50,7 +51,13 @@ export function useSleepCoach({
   const updateSettings = useCallback((patch: Partial<SleepCoachSettings>) => {
     setState((s) => ({
       ...s,
-      settings: { ...s.settings, ...patch },
+      settings: {
+        ...s.settings,
+        ...patch,
+        ...(patch.proxyBaseUrl !== undefined
+          ? { proxyBaseUrl: normalizeProxyBaseUrl(patch.proxyBaseUrl) }
+          : {}),
+      },
     }))
   }, [])
 

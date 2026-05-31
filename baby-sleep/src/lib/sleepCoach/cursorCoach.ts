@@ -1,4 +1,5 @@
 import { CoachApiError } from './api'
+import { normalizeProxyBaseUrl } from './proxyUrl'
 
 const CURSOR_API = 'https://api.cursor.com'
 
@@ -64,8 +65,8 @@ async function cursorRequest(
 }
 
 export function resolveCursorProxyBase(settings: { proxyBaseUrl: string }): string {
-  const custom = settings.proxyBaseUrl.trim()
-  if (custom) return `${custom.replace(/\/$/, '')}/cursor`
+  const custom = normalizeProxyBaseUrl(settings.proxyBaseUrl)
+  if (custom) return `${custom}/cursor`
 
   const envProxy = import.meta.env.VITE_SLEEP_COACH_PROXY as string | undefined
   if (envProxy?.trim()) return `${envProxy.trim().replace(/\/$/, '')}/cursor`
@@ -297,6 +298,12 @@ async function apiErrorFromResponse(res: Response): Promise<CoachApiError> {
   }
   if (res.status === 401) {
     return new CoachApiError('Invalid Cursor API key. Create one at cursor.com/dashboard → API Keys.', 'api')
+  }
+  if (res.status === 404) {
+    return new CoachApiError(
+      'Proxy or API path not found (404). Set Proxy URL to https://YOUR-WORKER.workers.dev (include https://).',
+      'api',
+    )
   }
   return new CoachApiError(detail || `Cursor API error (${res.status})`, 'api')
 }

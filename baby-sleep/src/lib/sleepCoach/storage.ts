@@ -1,4 +1,5 @@
 import { generateId } from '../sleepLogic'
+import { normalizeProxyBaseUrl } from './proxyUrl'
 import type { CoachMessage, CoachThread, SleepCoachSettings, SleepCoachState } from './types'
 import { DEFAULT_COACH_SETTINGS } from './types'
 
@@ -35,7 +36,7 @@ export function normalizeSleepCoachState(raw: Partial<SleepCoachState>): SleepCo
       ...DEFAULT_COACH_SETTINGS,
       ...raw.settings,
       apiKey: raw.settings?.apiKey ?? '',
-      proxyBaseUrl: raw.settings?.proxyBaseUrl?.replace(/\/$/, '') ?? '',
+      proxyBaseUrl: normalizeProxyBaseUrl(raw.settings?.proxyBaseUrl ?? ''),
     },
     threads: raw.threads ?? [],
     activeThreadId: raw.activeThreadId ?? null,
