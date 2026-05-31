@@ -9,7 +9,6 @@ import {
   YAxis,
 } from 'recharts'
 import type { DaySleepSummary } from '../../lib/analytics'
-import { formatHours } from '../../lib/analytics'
 
 interface Props {
   data: DaySleepSummary[]
@@ -172,8 +171,4 @@ export function NapNightStackChart({ data }: { data: DaySleepSummary[] }) {
       </div>
     </div>
   )
-}
-
-export function formatTooltipHours(minutes: number) {
-  return formatHours(minutes)
 }

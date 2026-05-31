@@ -8,7 +8,6 @@ on:
       - '.github/workflows/deploy-baby-sleep.yml'
   workflow_dispatch:
 
-# Deploy to gh-pages branch (works with Settings → Pages → Deploy from branch)
 permissions:
   contents: write
 
@@ -17,8 +16,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  test-and-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: baby-sleep
     steps:
       - uses: actions/checkout@v4
 
@@ -28,15 +30,19 @@ jobs:
           cache: npm
           cache-dependency-path: baby-sleep/package-lock.json
 
-      - name: Install and build
-        working-directory: baby-sleep
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Build for GitHub Pages
         env:
           GITHUB_PAGES: 'true'
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
 
       - name: Prepare site (app at /AI-Projects/baby-sleep/)
+        working-directory: .
         run: |
           mkdir -p _site/baby-sleep
           cp -r baby-sleep/dist/* _site/baby-sleep/
@@ -54,6 +60,21 @@ jobs:
             </body>
           </html>
           EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: github-pages-site
+          path: _site
+          retention-days: 1
+
+  deploy:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages-site
+          path: _site
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4

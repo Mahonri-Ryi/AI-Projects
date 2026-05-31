@@ -12,8 +12,18 @@ import { loadStateWithLegacy, saveState } from '../lib/storage'
 import { decodeSyncFromUrl, mergeAppState } from '../lib/sync'
 import type { AppState, ChildProfile, SleepKind } from '../types'
 
+function loadInitialState(): AppState {
+  const base = loadStateWithLegacy()
+  const incoming = decodeSyncFromUrl(window.location.search)
+  if (!incoming) return base
+  const url = new URL(window.location.href)
+  url.searchParams.delete('sync')
+  window.history.replaceState({}, '', url.pathname + url.hash)
+  return mergeAppState(base, incoming)
+}
+
 export function useBabySleep() {
-  const [state, setState] = useState<AppState>(() => loadStateWithLegacy())
+  const [state, setState] = useState<AppState>(loadInitialState)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -25,16 +35,8 @@ export function useBabySleep() {
     return () => clearInterval(id)
   }, [])
 
-  useEffect(() => {
-    const incoming = decodeSyncFromUrl(window.location.search)
-    if (!incoming) return
-    setState((prev) => mergeAppState(prev, incoming))
-    const url = new URL(window.location.href)
-    url.searchParams.delete('sync')
-    window.history.replaceState({}, '', url.pathname + url.hash)
-  }, [])
-
-  const now = useMemo(() => new Date(), [tick])
+  // tick forces periodic refresh of timers and predictions
+  const now = useMemo(() => new Date(), [tick]) // eslint-disable-line react-hooks/exhaustive-deps -- tick is intentional clock
 
   const activeChild = useMemo(
     () => state.children.find((c) => c.id === state.activeChildId) ?? null,
@@ -46,14 +48,14 @@ export function useBabySleep() {
     [state.sessions, state.activeChildId],
   )
 
-  const status = useMemo(() => getSleepStatus(childSessions, now), [childSessions, now])
+  const status = useMemo(() => getSleepStatus(childSessions), [childSessions])
 
   const prediction = useMemo(
     () =>
       activeChild?.birthDate
         ? predictNextNap(activeChild.birthDate, childSessions, now)
         : null,
-    [activeChild?.birthDate, childSessions, now],
+    [activeChild, childSessions, now],
   )
 
   const guidance = useMemo(
@@ -61,7 +63,7 @@ export function useBabySleep() {
       activeChild?.birthDate
         ? getWakeWindowGuidance(activeChild.birthDate, now)
         : null,
-    [activeChild?.birthDate, now],
+    [activeChild, now],
   )
 
   const ageMonths = activeChild?.birthDate
