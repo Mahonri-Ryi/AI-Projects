@@ -563,6 +563,52 @@ input:focus, select:focus {
   accent-color: var(--primary);
 }
 
+.permission-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.permission-status__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.permission-status--granted {
+  border-color: var(--success-border);
+  background: var(--success-soft);
+}
+
+.permission-status--granted strong {
+  color: var(--success);
+}
+
+.permission-status--denied {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+}
+
+.permission-status--denied strong {
+  color: var(--warning);
+}
+
+.permission-help {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.permission-help ul {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+}
+
 .reminder-leads {
   display: grid;
   gap: 1rem;

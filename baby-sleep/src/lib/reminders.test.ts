@@ -50,6 +50,7 @@ describe('buildDueReminders', () => {
     )
     expect(due).toHaveLength(2)
     expect(due.map((d) => d.kind)).toEqual(['nap', 'bedtime'])
+    expect(due.every((d) => d.tag.startsWith('little-dream-'))).toBe(true)
   })
 })
 
@@ -62,6 +63,7 @@ describe('remindersToFire', () => {
         fireAt,
         title: 't',
         body: 'b',
+        tag: 'little-dream-nap',
       },
     ]
     const fired = new Set<string>()

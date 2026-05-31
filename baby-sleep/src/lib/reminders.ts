@@ -1,5 +1,20 @@
-import { addMinutes, subMinutes } from 'date-fns'
+import { subMinutes } from 'date-fns'
 import type { NextBedtimePrediction, NextNapPrediction, ReminderSettings } from '../types'
+import {
+  getNotificationPermission,
+  notificationsSupported,
+  serviceWorkerSupported,
+} from './notificationPermission'
+
+export {
+  getNotificationPermission,
+  getPermissionUiState,
+  isInstalledAsPwa,
+  notificationsSupported,
+  permissionStatusLabel,
+  requestPhoneNotificationPermission,
+  serviceWorkerSupported,
+} from './notificationPermission'
 
 export type ReminderKind = 'nap' | 'bedtime'
 
@@ -8,30 +23,7 @@ export interface DueReminder {
   fireAt: Date
   title: string
   body: string
-}
-
-export function notificationsSupported(): boolean {
-  return typeof window !== 'undefined' && 'Notification' in window
-}
-
-export async function requestNotificationPermission(): Promise<NotificationPermission> {
-  if (!notificationsSupported()) return 'denied'
-  if (Notification.permission === 'granted') return 'granted'
-  if (Notification.permission === 'denied') return 'denied'
-  return Notification.requestPermission()
-}
-
-export function showSleepReminder(title: string, body: string, tag: string): void {
-  if (!notificationsSupported() || Notification.permission !== 'granted') return
-  try {
-    new Notification(title, {
-      body,
-      tag,
-      icon: `${import.meta.env.BASE_URL}favicon.svg`,
-    })
-  } catch {
-    // Some browsers block notifications outside secure contexts
-  }
+  tag: string
 }
 
 export function buildDueReminders(
@@ -53,7 +45,8 @@ export function buildDueReminders(
         kind: 'nap',
         fireAt,
         title: `${name}: Nap wind-down soon`,
-        body: `Start calming for nap around ${settings.napMinutesBefore} minutes — watch sleepy cues.`,
+        body: `Start calming for nap in about ${settings.napMinutesBefore} minutes — watch sleepy cues.`,
+        tag: 'little-dream-nap',
       })
     }
   }
@@ -66,6 +59,7 @@ export function buildDueReminders(
         fireAt,
         title: `${name}: Bedtime wind-down soon`,
         body: `Begin evening routine in about ${settings.bedtimeMinutesBefore} minutes.`,
+        tag: 'little-dream-bedtime',
       })
     }
   }
@@ -73,7 +67,64 @@ export function buildDueReminders(
   return due
 }
 
-/** Fire if we're within 1 minute after the scheduled reminder time. */
+/** Show via service worker (required for iOS PWA). Falls back to page Notification API. */
+export async function showSleepReminder(title: string, body: string, tag: string): Promise<void> {
+  if (!notificationsSupported() || getNotificationPermission() !== 'granted') return
+
+  const icon = `${import.meta.env.BASE_URL}favicon.svg`
+  const options: NotificationOptions = { body, tag, icon }
+
+  if (serviceWorkerSupported()) {
+    try {
+      const registration = await navigator.serviceWorker.ready
+      await registration.showNotification(title, options)
+      return
+    } catch {
+      // fall through
+    }
+  }
+
+  try {
+    new Notification(title, options)
+  } catch {
+    // blocked on some platforms when not using SW
+  }
+}
+
+/** Push upcoming reminders to the service worker for background alerts. */
+export async function syncRemindersToServiceWorker(reminders: DueReminder[]): Promise<void> {
+  if (!serviceWorkerSupported() || getNotificationPermission() !== 'granted') return
+
+  try {
+    const registration = await navigator.serviceWorker.ready
+    const openUrl = new URL(import.meta.env.BASE_URL, window.location.origin).href
+    registration.active?.postMessage({
+      type: 'SCHEDULE_REMINDERS',
+      reminders: reminders.map((r) => ({
+        fireAt: r.fireAt.getTime(),
+        title: r.title,
+        body: r.body,
+        tag: r.tag,
+      })),
+      icon: `${import.meta.env.BASE_URL}favicon.svg`,
+      openUrl,
+    })
+  } catch {
+    // SW not ready
+  }
+}
+
+export async function clearServiceWorkerReminders(): Promise<void> {
+  if (!serviceWorkerSupported()) return
+  try {
+    const registration = await navigator.serviceWorker.ready
+    registration.active?.postMessage({ type: 'SCHEDULE_REMINDERS', reminders: [] })
+  } catch {
+    // ignore
+  }
+}
+
+/** Fire if we're within one minute after the scheduled reminder time. */
 export function remindersToFire(
   due: DueReminder[],
   now: Date,
@@ -92,23 +143,4 @@ export function reminderLeadOptions(): { nap: number[]; bedtime: number[] } {
     nap: [5, 10, 15, 20],
     bedtime: [10, 15, 20, 30],
   }
-}
-
-export function nextReminderCheckMs(due: DueReminder[], now: Date): number {
-  const upcoming = due
-    .map((r) => r.fireAt.getTime() - now.getTime())
-    .filter((ms) => ms > 0)
-  if (upcoming.length === 0) return 30_000
-  return Math.min(30_000, Math.max(5_000, Math.min(...upcoming)))
-}
-
-export function formatReminderPreview(
-  target: Date,
-  minutesBefore: number,
-): string {
-  return formatTime(addMinutes(target, -minutesBefore))
-}
-
-function formatTime(d: Date): string {
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }

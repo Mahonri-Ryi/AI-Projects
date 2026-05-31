@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ReminderSettings as ReminderSettingsType } from '../types'
 import {
-  notificationsSupported,
+  getPermissionUiState,
+  isInstalledAsPwa,
+  permissionStatusLabel,
   reminderLeadOptions,
-  requestNotificationPermission,
+  requestPhoneNotificationPermission,
+  showSleepReminder,
 } from '../lib/reminders'
+import type { PermissionUiState } from '../lib/notificationPermission'
 import { Card } from './ui/Card'
 
 interface Props {
@@ -13,63 +17,122 @@ interface Props {
 }
 
 export function ReminderSettings({ settings, onChange }: Props) {
-  const [permissionHint, setPermissionHint] = useState<string | null>(null)
-  const supported = notificationsSupported()
+  const [permissionState, setPermissionState] = useState<PermissionUiState>(() =>
+    getPermissionUiState(),
+  )
+  const [requesting, setRequesting] = useState(false)
   const { nap: napLeads, bedtime: bedLeads } = reminderLeadOptions()
 
-  const toggleEnabled = async () => {
-    if (!settings.enabled) {
-      if (!supported) {
-        setPermissionHint('Notifications are not supported in this browser.')
-        return
-      }
-      const perm = await requestNotificationPermission()
-      if (perm !== 'granted') {
-        setPermissionHint('Allow notifications in your browser to enable reminders.')
-        return
-      }
-      setPermissionHint(null)
-      onChange({ ...settings, enabled: true })
-      return
+  const refreshPermission = useCallback(() => {
+    setPermissionState(getPermissionUiState())
+  }, [])
+
+  useEffect(() => {
+    const onFocus = () => refreshPermission()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [refreshPermission])
+
+  const enablePhoneNotifications = async () => {
+    setRequesting(true)
+    try {
+      await requestPhoneNotificationPermission()
+      refreshPermission()
+    } finally {
+      setRequesting(false)
     }
-    onChange({ ...settings, enabled: false })
   }
+
+  const canEnableReminders = permissionState === 'granted'
+  const showAllowButton =
+    permissionState === 'default' && isInstalledAsPwa()
 
   return (
     <Card
       title="Reminders"
-      subtitle="Optional alerts before nap and bedtime wind-down"
+      subtitle="Phone alerts before nap and bedtime wind-down"
     >
-      {!supported && (
-        <p className="prose" style={{ marginBottom: '1rem' }}>
-          Your browser does not support notifications. Open Little Dream on your phone or desktop
-          when it is time to check the schedule.
+      <div className={`permission-status permission-status--${permissionState}`}>
+        <span className="permission-status__label">Phone notifications</span>
+        <strong>{permissionStatusLabel(permissionState)}</strong>
+      </div>
+
+      {permissionState === 'needs-pwa' && (
+        <p className="prose" style={{ marginTop: '1rem' }}>
+          On iPhone, notifications only work when Little Dream is installed on your{' '}
+          <strong>Home Screen</strong>: open this site in Safari → Share →{' '}
+          <strong>Add to Home Screen</strong>, then open the app from that icon.
         </p>
       )}
 
-      <label className="reminder-toggle">
+      {permissionState === 'unsupported' && (
+        <p className="prose" style={{ marginTop: '1rem' }}>
+          This browser cannot show notifications. Use Safari or Chrome on your phone with the
+          home-screen app installed.
+        </p>
+      )}
+
+      {permissionState === 'denied' && (
+        <div className="permission-help">
+          <p>
+            Notifications are blocked. To turn them on:
+          </p>
+          <ul>
+            <li>
+              <strong>iPhone:</strong> Settings → Notifications → Little Dream → Allow Notifications
+            </li>
+            <li>
+              <strong>Android:</strong> Settings → Apps → Little Dream → Notifications → On
+            </li>
+          </ul>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            After changing settings, return here and tap “Check again”.
+          </p>
+          <button type="button" className="btn btn--ghost" onClick={refreshPermission}>
+            Check again
+          </button>
+        </div>
+      )}
+
+      {showAllowButton && (
+        <button
+          type="button"
+          className="btn btn--primary"
+          style={{ width: '100%', marginTop: '1rem' }}
+          disabled={requesting}
+          onClick={() => void enablePhoneNotifications()}
+        >
+          {requesting ? 'Waiting for permission…' : 'Allow notifications on this phone'}
+        </button>
+      )}
+
+      {permissionState === 'default' && !isInstalledAsPwa() && (
+        <p className="prose" style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
+          Open Little Dream from your <strong>home screen icon</strong> (not the Safari tab), then
+          tap the button above.
+        </p>
+      )}
+
+      <label
+        className="reminder-toggle"
+        style={{ marginTop: '1.25rem', opacity: canEnableReminders ? 1 : 0.55 }}
+      >
         <input
           type="checkbox"
           checked={settings.enabled}
-          disabled={!supported}
-          onChange={() => void toggleEnabled()}
+          disabled={!canEnableReminders}
+          onChange={(e) => onChange({ ...settings, enabled: e.target.checked })}
         />
-        <span>Notify before nap &amp; bedtime</span>
+        <span>Remind me before nap &amp; bedtime</span>
       </label>
 
-      {permissionHint && (
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--warning)',
-            marginTop: '0.75rem',
-          }}
-        >
-          {permissionHint}
+      {!canEnableReminders && permissionState !== 'denied' && permissionState !== 'unsupported' && (
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+          Allow phone notifications first to turn on reminders.
         </p>
       )}
 
-      {settings.enabled && (
+      {settings.enabled && canEnableReminders && (
         <div className="reminder-leads">
           <label>
             <span>Nap reminder</span>
@@ -101,12 +164,27 @@ export function ReminderSettings({ settings, onChange }: Props) {
               ))}
             </select>
           </label>
+          <button
+            type="button"
+            className="btn btn--ghost"
+            style={{ justifySelf: 'start' }}
+            onClick={() =>
+              void showSleepReminder(
+                'Little Dream test',
+                'If you see this, phone notifications are working.',
+                'little-dream-test',
+              )
+            }
+          >
+            Send test notification
+          </button>
         </div>
       )}
 
       <p className="prose" style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
-        Reminders fire while this app is open or recently used. For best results, add Little Dream
-        to your home screen and keep notifications allowed.
+        Alerts use your phone&apos;s notification system. Timing is most reliable when the app
+        has been opened recently; fully closing the app for a long time may delay alerts on some
+        devices.
       </p>
     </Card>
   )
