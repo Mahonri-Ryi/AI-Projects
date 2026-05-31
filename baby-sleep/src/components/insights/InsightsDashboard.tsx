@@ -16,7 +16,7 @@ import { IconTrendUp } from '../icons'
 import { NapNightStackChart, SleepTrendChart } from './SleepTrendChart'
 import { DayTimeline, TodayTimelineHeader } from './DayTimeline'
 
-type Range = 7 | 14
+type Range = 7 | 14 | 30
 
 interface Props {
   sessions: SleepSession[]
@@ -58,7 +58,7 @@ export function InsightsDashboard({ sessions, guidance, now }: Props) {
   return (
     <div className="insights-page">
       <div className="range-toggle" role="group" aria-label="Date range">
-        {([7, 14] as Range[]).map((d) => (
+        {([7, 14, 30] as Range[]).map((d) => (
           <button
             key={d}
             type="button"
@@ -143,6 +143,7 @@ export function InsightsDashboard({ sessions, guidance, now }: Props) {
             data={summaries}
             targetMinHours={targetMin}
             targetMaxHours={targetMax}
+            compactXAxis={range >= 30}
           />
         )}
       </Card>
@@ -151,7 +152,7 @@ export function InsightsDashboard({ sessions, guidance, now }: Props) {
         {periodStats.daysWithData < 1 ? (
           <EmptyChart message="Your nap and night breakdown will appear here." />
         ) : (
-          <NapNightStackChart data={summaries} />
+          <NapNightStackChart data={summaries} compactXAxis={range >= 30} />
         )}
       </Card>
 

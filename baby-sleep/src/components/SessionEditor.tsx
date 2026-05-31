@@ -1,11 +1,18 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import type { SleepKind, SleepSession } from '../types'
+import { FEEDING_TAG_LABELS, type FeedingTag, type SleepKind, type SleepSession } from '../types'
 import { Card } from './ui/Card'
+
+const FEEDING_TAGS = Object.keys(FEEDING_TAG_LABELS) as FeedingTag[]
 
 interface Props {
   session: SleepSession
-  onSave: (patch: { kind: SleepKind; start: string; end: string | null }) => void
+  onSave: (patch: {
+    kind: SleepKind
+    start: string
+    end: string | null
+    feedingTags?: FeedingTag[]
+  }) => void
   onCancel: () => void
 }
 
@@ -24,6 +31,13 @@ export function SessionEditor({ session, onSave, onCancel }: Props) {
   const [start, setStart] = useState(toLocalInput(session.start))
   const [end, setEnd] = useState(session.end ? toLocalInput(session.end) : '')
   const [inProgress, setInProgress] = useState(!session.end)
+  const [feedingTags, setFeedingTags] = useState<FeedingTag[]>(session.feedingTags ?? [])
+
+  const toggleFeeding = (tag: FeedingTag) => {
+    setFeedingTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    )
+  }
 
   return (
     <Card title="Edit session" subtitle={format(parseISO(session.start), 'EEE, MMM d')}>
@@ -52,6 +66,23 @@ export function SessionEditor({ session, onSave, onCancel }: Props) {
           <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
         </label>
       )}
+      {!inProgress && (
+        <fieldset className="feeding-fieldset">
+          <legend>Feeding context (optional)</legend>
+          <div className="feeding-tags">
+            {FEEDING_TAGS.map((tag) => (
+              <label key={tag} className="feeding-tag-toggle">
+                <input
+                  type="checkbox"
+                  checked={feedingTags.includes(tag)}
+                  onChange={() => toggleFeeding(tag)}
+                />
+                {FEEDING_TAG_LABELS[tag]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <div className="btn-row" style={{ marginTop: '1rem' }}>
         <button type="button" className="btn btn--ghost" onClick={onCancel}>
           Cancel
@@ -64,6 +95,7 @@ export function SessionEditor({ session, onSave, onCancel }: Props) {
               kind,
               start: fromLocalInput(start),
               end: inProgress ? null : end ? fromLocalInput(end) : null,
+              feedingTags: inProgress ? undefined : feedingTags.length ? feedingTags : undefined,
             })
           }
         >

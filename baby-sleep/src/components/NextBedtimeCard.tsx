@@ -1,5 +1,6 @@
 import { differenceInMinutes, format } from 'date-fns'
 import type { NextBedtimePrediction, SleepStatus } from '../types'
+import { travelBedtimeNote } from '../lib/travelMode'
 import { Card } from './ui/Card'
 import { ResearchLinks } from './ui/ResearchLinks'
 
@@ -8,6 +9,7 @@ interface Props {
   status: SleepStatus
   now: Date
   nightStartedToday: boolean
+  travelMode?: boolean
 }
 
 export function NextBedtimeCard({
@@ -15,6 +17,7 @@ export function NextBedtimeCard({
   status,
   now,
   nightStartedToday,
+  travelMode = false,
 }: Props) {
   if (status.isAsleep && status.currentSession?.kind === 'night') {
     return (
@@ -117,6 +120,22 @@ export function NextBedtimeCard({
       {minsToWindowStart > 0 && minsToSweet > 60 && (
         <p style={{ fontSize: '0.8rem', textAlign: 'center', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
           Window opens in ~{minsToWindowStart} min
+        </p>
+      )}
+
+      {travelMode && (
+        <p
+          className="travel-note"
+          style={{
+            fontSize: '0.85rem',
+            marginTop: '1rem',
+            padding: '0.75rem',
+            background: 'var(--info-soft, var(--warning-soft))',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {travelBedtimeNote()}
         </p>
       )}
 

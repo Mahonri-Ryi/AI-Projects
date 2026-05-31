@@ -5,7 +5,9 @@ import type {
   ReminderSettings,
   SleepSession,
   SyncMeta,
+  WindDownChecklistState,
 } from '../types'
+import { normalizeChecklist } from './checklist'
 import { DEFAULT_REMINDER_SETTINGS, generateId } from './sleepLogic'
 
 export const CHILD_COLORS = [
@@ -35,6 +37,7 @@ interface LegacyStateV1 {
   dayMarkers?: DayMarker[]
   syncMeta?: SyncMeta
   onboardingComplete?: boolean
+  checklist?: WindDownChecklistState
 }
 
 function isV2Payload(parsed: LegacyStateV1): boolean {
@@ -82,6 +85,7 @@ export function normalizeState(raw: unknown): AppState {
       dayMarkers: parsed.dayMarkers,
       syncMeta: parsed.syncMeta,
       onboardingComplete: parsed.onboardingComplete,
+      checklist: parsed.checklist,
     })
   }
 
@@ -117,6 +121,7 @@ function normalizeAppFields(state: AppState): AppState {
     syncMeta: state.syncMeta ?? { lastSyncedAt: null, lastSyncLabel: null, mergeCount: 0 },
     onboardingComplete: state.onboardingComplete ?? false,
     children: state.children,
+    checklist: normalizeChecklist(state.checklist),
   }
 }
 

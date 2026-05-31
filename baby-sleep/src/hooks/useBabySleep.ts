@@ -18,15 +18,30 @@ import { getGlanceSummary } from '../lib/glance'
 import { generateSleepHints } from '../lib/sleepHints'
 import { buildWeeklyReport } from '../lib/weeklyReport'
 import { upsertDayMarker, removeDayMarker, markersForChild } from '../lib/dayMarkers'
+import { getLoggingStreak } from '../lib/streaks'
+import { getForgotToLogPrompt } from '../lib/forgotToLog'
+import { getNapTransitionTips } from '../lib/napTransitions'
+import { isTravelDay } from '../lib/travelMode'
+import { cloneSessions } from '../lib/travelMode'
+import {
+  addChecklistItem,
+  normalizeChecklist,
+  removeChecklistItem,
+  toggleChecklistItem,
+} from '../lib/checklist'
 import type {
   AppState,
   ChildProfile,
   ChildRoutine,
   DayMarkerTag,
+  FeedingTag,
   ReminderSettings,
   SleepKind,
   SleepSession,
+  UndoOffer,
 } from '../types'
+
+const UNDO_MS = 30_000
 
 function loadInitialState(): AppState {
   const base = loadStateWithLegacy()
@@ -41,6 +56,7 @@ function loadInitialState(): AppState {
 export function useBabySleep() {
   const [state, setState] = useState<AppState>(loadInitialState)
   const [tick, setTick] = useState(0)
+  const [undo, setUndo] = useState<UndoOffer | null>(null)
 
   useEffect(() => {
     saveState(state)
@@ -50,6 +66,17 @@ export function useBabySleep() {
     const id = setInterval(() => setTick((t) => t + 1), 30_000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    if (!undo) return
+    const remaining = undo.expiresAt - Date.now()
+    if (remaining <= 0) {
+      const clear = window.setTimeout(() => setUndo(null), 0)
+      return () => window.clearTimeout(clear)
+    }
+    const t = window.setTimeout(() => setUndo(null), remaining)
+    return () => window.clearTimeout(t)
+  }, [undo])
 
   const now = useMemo(() => new Date(), [tick]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -68,6 +95,11 @@ export function useBabySleep() {
     [state, state.activeChildId],
   )
 
+  const travelMode = useMemo(
+    () => isTravelDay(childMarkers, state.activeChildId, now),
+    [childMarkers, state.activeChildId, now],
+  )
+
   const status = useMemo(() => getSleepStatus(childSessions), [childSessions])
 
   const routine = activeChild?.routine
@@ -83,9 +115,9 @@ export function useBabySleep() {
   const bedtimePrediction = useMemo(
     () =>
       activeChild?.birthDate
-        ? predictNextBedtime(activeChild.birthDate, childSessions, now, routine)
+        ? predictNextBedtime(activeChild.birthDate, childSessions, now, routine, travelMode)
         : null,
-    [activeChild, childSessions, now, routine],
+    [activeChild, childSessions, now, routine, travelMode],
   )
 
   const nightStartedToday = useMemo(
@@ -144,6 +176,34 @@ export function useBabySleep() {
     () => buildWeeklyReport(childSessions, now),
     [childSessions, now],
   )
+
+  const loggingStreak = useMemo(
+    () => getLoggingStreak(childSessions, now),
+    [childSessions, now],
+  )
+
+  const forgotToLog = useMemo(() => {
+    const maxWake = guidance?.maxMinutes ?? 120
+    return getForgotToLogPrompt(childSessions, maxWake + 30, now)
+  }, [childSessions, guidance, now])
+
+  const napTransition = useMemo(
+    () => (activeChild?.birthDate ? getNapTransitionTips(activeChild.birthDate, now) : null),
+    [activeChild, now],
+  )
+
+  const checklist = useMemo(
+    () => normalizeChecklist(state.checklist, now),
+    [state.checklist, now],
+  )
+
+  const offerUndo = useCallback((sessions: SleepSession[], label: string) => {
+    setUndo({
+      label,
+      expiresAt: Date.now() + UNDO_MS,
+      sessionsSnapshot: cloneSessions(sessions),
+    })
+  }, [])
 
   const setActiveChild = useCallback((childId: string) => {
     setState((s) => ({ ...s, activeChildId: childId }))
@@ -209,40 +269,64 @@ export function useBabySleep() {
     })
   }, [])
 
-  const startSleep = useCallback((kind: SleepKind) => {
-    setState((s) => {
-      const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
-      if (open) return s
-      return {
-        ...s,
-        sessions: [
-          ...s.sessions,
-          {
-            id: generateId(),
-            childId: s.activeChildId,
-            kind,
-            start: new Date().toISOString(),
-            end: null,
-          },
-        ],
-      }
-    })
-  }, [])
+  const startSleep = useCallback(
+    (kind: SleepKind) => {
+      setState((s) => {
+        const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
+        if (open) return s
+        offerUndo(s.sessions, kind === 'nap' ? 'Started nap' : 'Started bedtime')
+        return {
+          ...s,
+          sessions: [
+            ...s.sessions,
+            {
+              id: generateId(),
+              childId: s.activeChildId,
+              kind,
+              start: new Date().toISOString(),
+              end: null,
+            },
+          ],
+        }
+      })
+    },
+    [offerUndo],
+  )
 
   const endSleep = useCallback(() => {
     setState((s) => {
       const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
       if (!open) return s
+      offerUndo(s.sessions, 'Wake up')
       const end = new Date().toISOString()
       return {
         ...s,
         sessions: s.sessions.map((x) => (x.id === open.id ? { ...x, end } : x)),
       }
     })
+  }, [offerUndo])
+
+  const setLastSessionFeeding = useCallback((tags: FeedingTag[]) => {
+    setState((s) => {
+      const sorted = [...s.sessions]
+        .filter((x) => x.childId === s.activeChildId && x.end)
+        .sort((a, b) => parseISO(b.end!).getTime() - parseISO(a.end!).getTime())
+      const last = sorted[0]
+      if (!last) return s
+      return {
+        ...s,
+        sessions: s.sessions.map((x) =>
+          x.id === last.id ? { ...x, feedingTags: tags.length ? tags : undefined } : x,
+        ),
+      }
+    })
   }, [])
 
   const updateSession = useCallback(
-    (id: string, patch: Partial<Pick<SleepSession, 'kind' | 'start' | 'end'>>) => {
+    (
+      id: string,
+      patch: Partial<Pick<SleepSession, 'kind' | 'start' | 'end' | 'feedingTags'>>,
+    ) => {
       setState((s) => ({
         ...s,
         sessions: s.sessions.map((x) => (x.id === id ? { ...x, ...patch } : x)),
@@ -251,12 +335,18 @@ export function useBabySleep() {
     [],
   )
 
-  const deleteSession = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      sessions: s.sessions.filter((x) => x.id !== id),
-    }))
-  }, [])
+  const deleteSession = useCallback(
+    (id: string) => {
+      setState((s) => {
+        offerUndo(s.sessions, 'Removed session')
+        return {
+          ...s,
+          sessions: s.sessions.filter((x) => x.id !== id),
+        }
+      })
+    },
+    [offerUndo],
+  )
 
   const setDayMarker = useCallback(
     (date: string, tag: DayMarkerTag, note?: string) => {
@@ -286,6 +376,33 @@ export function useBabySleep() {
     )
   }, [])
 
+  const undoLastAction = useCallback(() => {
+    if (!undo || Date.now() > undo.expiresAt) return
+    setState((s) => ({ ...s, sessions: cloneSessions(undo.sessionsSnapshot) }))
+    setUndo(null)
+  }, [undo])
+
+  const toggleChecklist = useCallback(
+    (itemId: string) => {
+      setState((s) => toggleChecklistItem(s, itemId, now))
+    },
+    [now],
+  )
+
+  const addChecklist = useCallback(
+    (kind: 'nap' | 'bed', label: string) => {
+      setState((s) => addChecklistItem(s, kind, label, now))
+    },
+    [now],
+  )
+
+  const removeChecklist = useCallback(
+    (itemId: string) => {
+      setState((s) => removeChecklistItem(s, itemId, now))
+    },
+    [now],
+  )
+
   const recentSessions = useMemo(() => {
     return [...childSessions]
       .sort((a, b) => parseISO(b.start).getTime() - parseISO(a.start).getTime())
@@ -296,11 +413,16 @@ export function useBabySleep() {
     setState((s) => ({ ...s, reminders: next }))
   }, [])
 
+  const undoSecondsLeft = undo
+    ? Math.max(0, Math.ceil((undo.expiresAt - now.getTime()) / 1000))
+    : 0
+
   return {
     state,
     activeChild,
     childSessions,
     childMarkers,
+    travelMode,
     status,
     prediction,
     bedtimePrediction,
@@ -316,7 +438,14 @@ export function useBabySleep() {
     glance,
     sleepHints,
     weeklyReport,
+    loggingStreak,
+    forgotToLog,
+    napTransition,
+    checklist,
     showOnboarding,
+    undo,
+    undoSecondsLeft,
+    undoLastAction,
     setActiveChild,
     addChild,
     updateChild,
@@ -324,12 +453,16 @@ export function useBabySleep() {
     removeChild,
     startSleep,
     endSleep,
+    setLastSessionFeeding,
     updateSession,
     deleteSession,
     setDayMarker,
     clearDayMarker,
     completeOnboarding,
     replaceState,
+    toggleChecklist,
+    addChecklist,
+    removeChecklist,
     recentSessions,
     needsProfile,
     now,
