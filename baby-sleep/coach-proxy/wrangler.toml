@@ -1,0 +1,5 @@
+# Deploy this folder as a Worker (not static Pages assets).
+# Cloudflare Dashboard → Settings → Builds → Root directory: baby-sleep/coach-proxy
+name = "little-dream-coach"
+main = "worker.js"
+compatibility_date = "2026-05-31"

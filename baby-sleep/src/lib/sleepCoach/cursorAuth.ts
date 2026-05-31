@@ -1,4 +1,9 @@
 import { resolveCursorProxyBase } from './cursorCoach'
+import {
+  PROXY_MISDEPLOY_MESSAGE,
+  PROXY_UNREACHABLE_MESSAGE,
+  probeCoachProxyRoot,
+} from './proxyProbe'
 
 export type CursorKeyValidationResult =
   | { ok: true; label: string }
@@ -86,6 +91,11 @@ export async function validateCursorApiKey(
     }
   }
 
+  const probe = await probeCoachProxyRoot(proxyBaseUrl)
+  if (probe === 'misdeployed') {
+    return { ok: false, message: PROXY_MISDEPLOY_MESSAGE }
+  }
+
   const bases = [`${proxyBase.replace(/\/$/, '')}/v1/me`, `${proxyBase.replace(/\/$/, '')}/v0/me`]
 
   let lastStatus = 0
@@ -116,7 +126,9 @@ export async function validateCursorApiKey(
     return {
       ok: false,
       message:
-        'Could not reach Cursor. Check the proxy URL and that coach-proxy/worker.js is deployed.',
+        probe === 'ok'
+          ? 'Could not reach Cursor API through the proxy. Check your crsr_ key and try again.'
+          : PROXY_UNREACHABLE_MESSAGE,
     }
   }
   return {
