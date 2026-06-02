@@ -1,4 +1,4 @@
-import { differenceInMinutes, format } from 'date-fns'
+import { differenceInMinutes, format, parseISO } from 'date-fns'
 import { formatDurationWords, formatInUntilWithTime } from './timeDisplay'
 import type {
   GlanceSummary,
@@ -22,13 +22,12 @@ export function getGlanceSummary(
     }
   }
 
-  if (status.activeNightWake && status.awakeSince) {
+  if (status.openNightSession && status.activeNightWake && status.awakeSince) {
+    const sinceBedMs = differenceInMinutes(now, parseISO(status.openNightSession.start))
     return {
       kind: 'awake',
-      headline: `Night wake · ${formatDurationWords(
-        differenceInMinutes(now, status.awakeSince),
-      )}`,
-      subline: `Since ${format(status.awakeSince, 'h:mm a')} · tap Back to sleep when down`,
+      headline: `Night wake · ${formatDurationWords(differenceInMinutes(now, status.awakeSince))}`,
+      subline: `Tonight ${formatDurationWords(sinceBedMs)} since bedtime · tap Back to sleep`,
     }
   }
 

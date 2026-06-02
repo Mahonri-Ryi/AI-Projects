@@ -199,9 +199,14 @@ export interface SleepStatus {
 }
 
 export interface NightWakeStats {
+  /** Wall-clock time since bedtime session started (does not reset on night wakes). */
+  sinceBedtimeMinutes: number
+  bedtimeStarted: string
   wakesTonight: number
   totalAwakeTonightMinutes: number
   currentWakeMinutes: number
+  /** Time asleep tonight (since bedtime minus logged awake periods). */
+  asleepTonightMinutes: number
   typicalResettleMinutes: number | null
   aimResettleBy: Date | null
 }

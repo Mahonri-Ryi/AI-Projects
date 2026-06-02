@@ -95,5 +95,7 @@ describe('nightWake', () => {
     const stats = getNightWakeStats([night], [wake], childId)
     expect(stats?.currentWakeMinutes).toBeGreaterThanOrEqual(14)
     expect(stats?.wakesTonight).toBe(1)
+    expect(stats?.sinceBedtimeMinutes).toBeGreaterThanOrEqual(14)
+    expect(stats?.asleepTonightMinutes).toBeLessThan(stats!.sinceBedtimeMinutes)
   })
 })

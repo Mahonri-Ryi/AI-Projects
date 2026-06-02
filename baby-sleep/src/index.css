@@ -1915,6 +1915,32 @@ html[data-theme='dark'] .action-bar--primary .btn {
 }
 
 .status-hero--night-wake .status-hero__timer {
+  color: var(--indigo-light, #a5b4fc);
+}
+
+.status-hero__night-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.status-hero__night-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.status-hero__night-stat strong {
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.status-hero__night-stat--active strong {
   color: var(--warning, #f59e0b);
 }
 

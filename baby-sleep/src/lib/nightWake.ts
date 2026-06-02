@@ -90,21 +90,29 @@ export function getNightWakeStats(
     if (tonight.length === 0) return null
     const total = tonight.reduce((s, w) => s + wakeDurationMinutes(w, now), 0)
     return {
+      sinceBedtimeMinutes: 0,
+      bedtimeStarted: '',
       wakesTonight: tonight.length,
       totalAwakeTonightMinutes: total,
       currentWakeMinutes: 0,
+      asleepTonightMinutes: 0,
       typicalResettleMinutes: getTypicalResettleMinutes(nightWakes, childId, now),
       aimResettleBy: null,
     }
   }
 
   const sessionId = openNight?.id ?? active?.nightSessionId
-  if (!sessionId) return null
+  if (!sessionId || !openNight) return null
+
+  const bedtimeStart = parseISO(openNight.start)
+  const sinceBedtimeMinutes = Math.max(0, differenceInMinutes(now, bedtimeStart))
 
   const forNight = wakesForNightSession(nightWakes, sessionId)
   const completed = forNight.filter((w) => w.end)
   const totalCompleted = completed.reduce((s, w) => s + wakeDurationMinutes(w, now), 0)
   const current = active ? wakeDurationMinutes(active, now) : 0
+  const totalAwake = totalCompleted + current
+  const asleepTonightMinutes = Math.max(0, sinceBedtimeMinutes - totalAwake)
   const typical = getTypicalResettleMinutes(nightWakes, childId, now)
 
   let aimResettleBy: Date | null = null
@@ -113,9 +121,12 @@ export function getNightWakeStats(
   }
 
   return {
+    sinceBedtimeMinutes,
+    bedtimeStarted: openNight.start,
     wakesTonight: forNight.length,
-    totalAwakeTonightMinutes: totalCompleted + current,
+    totalAwakeTonightMinutes: totalAwake,
     currentWakeMinutes: current,
+    asleepTonightMinutes,
     typicalResettleMinutes: typical,
     aimResettleBy,
   }
