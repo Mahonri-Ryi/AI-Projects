@@ -27,6 +27,14 @@ export function NightWakeCard({ stats, now }: Props) {
 
       <ul className="night-wake-card__stats">
         <li>
+          <span>Since bedtime</span>
+          <strong>{formatDurationWords(stats.sinceBedtimeMinutes)}</strong>
+        </li>
+        <li>
+          <span>Asleep tonight</span>
+          <strong>{formatDurationWords(stats.asleepTonightMinutes)}</strong>
+        </li>
+        <li>
           <span>Total awake tonight</span>
           <strong>{formatDurationWords(totalAwakeTonightMinutes)}</strong>
         </li>
