@@ -1,5 +1,5 @@
 import LZString from 'lz-string'
-import type { AppState } from '../types'
+import type { AppState, NightWake } from '../types'
 import { normalizeState } from './migrate'
 
 export interface SyncPayloadV3 {
@@ -8,6 +8,16 @@ export interface SyncPayloadV3 {
   activeChildId: string
   sessions: AppState['sessions']
   dayMarkers?: AppState['dayMarkers']
+  nightWakes?: AppState['nightWakes']
+}
+
+export interface SyncPayloadV4 {
+  v: 4
+  children: AppState['children']
+  activeChildId: string
+  sessions: AppState['sessions']
+  dayMarkers?: AppState['dayMarkers']
+  nightWakes?: AppState['nightWakes']
 }
 
 export interface SyncPayloadV2 {
@@ -29,12 +39,13 @@ export interface SyncPayloadV1 {
 }
 
 export function encodeSyncLink(state: AppState, baseUrl: string): string {
-  const payload: SyncPayloadV3 = {
-    v: 3,
+  const payload: SyncPayloadV4 = {
+    v: 4,
     children: state.children,
     activeChildId: state.activeChildId,
     sessions: state.sessions.slice(-400),
     dayMarkers: state.dayMarkers?.slice(-200),
+    nightWakes: state.nightWakes?.slice(-300),
   }
   const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload))
   const url = new URL(baseUrl)
@@ -49,9 +60,9 @@ export function decodeSyncFromUrl(search: string): AppState | null {
   try {
     const json = LZString.decompressFromEncodedURIComponent(data)
     if (!json) return null
-    const parsed = JSON.parse(json) as SyncPayloadV3 | SyncPayloadV2 | SyncPayloadV1
+    const parsed = JSON.parse(json) as SyncPayloadV4 | SyncPayloadV3 | SyncPayloadV2 | SyncPayloadV1
 
-    if (parsed.v === 3) {
+    if (parsed.v === 4 || parsed.v === 3) {
       return normalizeState({ version: 2, ...parsed })
     }
 
@@ -109,6 +120,33 @@ function mergeDayMarkers(
   return [...byKey.values()]
 }
 
+export function mergeNightWakes(
+  local: NightWake[] | undefined,
+  incoming: NightWake[] | undefined,
+): NightWake[] {
+  const byId = new Map<string, NightWake>()
+  for (const w of local ?? []) byId.set(w.id, w)
+  for (const w of incoming ?? []) {
+    const existing = byId.get(w.id)
+    if (!existing) {
+      byId.set(w.id, w)
+      continue
+    }
+    if (w.end && !existing.end) {
+      byId.set(w.id, w)
+      continue
+    }
+    if (w.end && existing.end) {
+      const wEnd = new Date(w.end).getTime()
+      const eEnd = new Date(existing.end).getTime()
+      if (wEnd > eEnd) byId.set(w.id, w)
+    }
+  }
+  return [...byId.values()].sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+  )
+}
+
 export function mergeAppState(local: AppState, incoming: AppState): AppState {
   const childById = new Map(local.children.map((c) => [c.id, c]))
   for (const c of incoming.children) {
@@ -133,6 +171,7 @@ export function mergeAppState(local: AppState, incoming: AppState): AppState {
     activeChildId: local.activeChildId || incoming.activeChildId,
     sessions,
     dayMarkers: mergeDayMarkers(local.dayMarkers, incoming.dayMarkers),
+    nightWakes: mergeNightWakes(local.nightWakes, incoming.nightWakes),
     syncMeta: {
       lastSyncedAt: new Date().toISOString(),
       lastSyncLabel: `Merged ${incoming.sessions.length} sessions from partner`,

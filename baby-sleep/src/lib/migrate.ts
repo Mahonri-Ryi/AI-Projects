@@ -2,6 +2,7 @@ import type {
   AppState,
   ChildProfile,
   DayMarker,
+  NightWake,
   ReminderSettings,
   SleepSession,
   SyncMeta,
@@ -38,6 +39,7 @@ interface LegacyStateV1 {
   syncMeta?: SyncMeta
   onboardingComplete?: boolean
   checklist?: WindDownChecklistState
+  nightWakes?: NightWake[]
 }
 
 function isV2Payload(parsed: LegacyStateV1): boolean {
@@ -86,6 +88,7 @@ export function normalizeState(raw: unknown): AppState {
       syncMeta: parsed.syncMeta,
       onboardingComplete: parsed.onboardingComplete,
       checklist: parsed.checklist,
+      nightWakes: parsed.nightWakes,
     })
   }
 
@@ -118,6 +121,7 @@ function normalizeAppFields(state: AppState): AppState {
   return {
     ...state,
     dayMarkers: state.dayMarkers ?? [],
+    nightWakes: state.nightWakes ?? [],
     syncMeta: state.syncMeta ?? { lastSyncedAt: null, lastSyncLabel: null, mergeCount: 0 },
     onboardingComplete: state.onboardingComplete ?? false,
     children: state.children,

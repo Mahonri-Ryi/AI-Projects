@@ -28,14 +28,26 @@ export function BackupExportCard({ state, activeChild, childSessions }: Props) {
           <button
             type="button"
             className="btn btn--ghost"
-            onClick={() => exportPediatricianText(activeChild, childSessions)}
+            onClick={() =>
+              exportPediatricianText(
+                activeChild,
+                childSessions,
+                (state.nightWakes ?? []).filter((w) => w.childId === activeChild.id),
+              )
+            }
           >
             Visit summary (text)
           </button>
           <button
             type="button"
             className="btn btn--ghost"
-            onClick={() => printPediatricianReport(activeChild, childSessions)}
+            onClick={() =>
+              printPediatricianReport(
+                activeChild,
+                childSessions,
+                (state.nightWakes ?? []).filter((w) => w.childId === activeChild.id),
+              )
+            }
           >
             Print PDF
           </button>

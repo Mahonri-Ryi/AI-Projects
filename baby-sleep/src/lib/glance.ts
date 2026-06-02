@@ -1,5 +1,5 @@
 import { differenceInMinutes, format } from 'date-fns'
-import { formatInUntilWithTime } from './timeDisplay'
+import { formatDurationWords, formatInUntilWithTime } from './timeDisplay'
 import type {
   GlanceSummary,
   NextBedtimePrediction,
@@ -22,8 +22,21 @@ export function getGlanceSummary(
     }
   }
 
+  if (status.activeNightWake && status.awakeSince) {
+    return {
+      kind: 'awake',
+      headline: `Night wake · ${formatDurationWords(
+        differenceInMinutes(now, status.awakeSince),
+      )}`,
+      subline: `Since ${format(status.awakeSince, 'h:mm a')} · tap Back to sleep when down`,
+    }
+  }
+
   if (status.isAsleep && status.asleepSince) {
-    const kind = status.currentSession?.kind === 'night' ? 'night sleep' : 'nap'
+    const kind =
+      status.currentSession?.kind === 'night' || status.openNightSession
+        ? 'night sleep'
+        : 'nap'
     return {
       kind: 'asleep',
       headline: `Sleeping · ${kind}`,

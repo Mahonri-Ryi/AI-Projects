@@ -4,7 +4,15 @@ import { getGlanceSummary } from './glance'
 describe('getGlanceSummary', () => {
   it('asks for profile when needed', () => {
     const g = getGlanceSummary(
-      { isAsleep: false, currentSession: null, lastEndedSession: null, awakeSince: null, asleepSince: null },
+      {
+        isAsleep: false,
+        currentSession: null,
+        lastEndedSession: null,
+        awakeSince: null,
+        asleepSince: null,
+        openNightSession: null,
+        activeNightWake: null,
+      },
       null,
       null,
       true,
