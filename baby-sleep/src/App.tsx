@@ -226,6 +226,7 @@ function App() {
                 awakeMinutes={awakeMinutes}
                 asleepMinutes={asleepMinutes}
                 formatDuration={formatDuration}
+                nightStats={nightWakeStats}
               />
               <ActionButtons
                 status={status}
