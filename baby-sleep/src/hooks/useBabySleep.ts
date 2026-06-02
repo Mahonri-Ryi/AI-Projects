@@ -301,7 +301,7 @@ export function useBabySleep() {
   }, [])
 
   const startSleep = useCallback(
-    (kind: SleepKind) => {
+    (kind: SleepKind, startIso: string) => {
       setState((s) => {
         const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
         if (open) return s
@@ -318,7 +318,7 @@ export function useBabySleep() {
               id: generateId(),
               childId: s.activeChildId,
               kind,
-              start: new Date().toISOString(),
+              start: startIso,
               end: null,
             },
           ],
@@ -328,22 +328,25 @@ export function useBabySleep() {
     [offerUndo],
   )
 
-  const endSleep = useCallback(() => {
-    setState((s) => {
-      const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
-      if (!open) return s
-      offerUndo(s.sessions, s.nightWakes ?? [], 'Wake up')
-      const end = new Date().toISOString()
-      const wakes = (s.nightWakes ?? []).map((w) =>
-        w.childId === s.activeChildId && w.end === null ? { ...w, end } : w,
-      )
-      return {
-        ...s,
-        nightWakes: wakes,
-        sessions: s.sessions.map((x) => (x.id === open.id ? { ...x, end } : x)),
-      }
-    })
-  }, [offerUndo])
+  const endSleep = useCallback(
+    (endIso: string) => {
+      setState((s) => {
+        const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
+        if (!open) return s
+        if (parseISO(endIso).getTime() < parseISO(open.start).getTime()) return s
+        offerUndo(s.sessions, s.nightWakes ?? [], 'Wake up')
+        const wakes = (s.nightWakes ?? []).map((w) =>
+          w.childId === s.activeChildId && w.end === null ? { ...w, end: endIso } : w,
+        )
+        return {
+          ...s,
+          nightWakes: wakes,
+          sessions: s.sessions.map((x) => (x.id === open.id ? { ...x, end: endIso } : x)),
+        }
+      })
+    },
+    [offerUndo],
+  )
 
   const startNightWake = useCallback(
     (startIso: string) => {

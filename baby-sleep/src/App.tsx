@@ -16,10 +16,8 @@ import { usePwaUpdate } from './hooks/usePwaUpdate'
 import { ActionButtons } from './components/ActionButtons'
 import { NightWakeCard } from './components/NightWakeCard'
 import { NightWakeInsightsCard } from './components/NightWakeInsightsCard'
-import {
-  NightWakeTimePrompt,
-  type NightWakeTimePromptKind,
-} from './components/NightWakeTimePrompt'
+import { LogTimePrompt } from './components/LogTimePrompt'
+import { defaultMinTimeForLog, type LogTimePromptKind } from './lib/logTimePrompt'
 import { SleepLog } from './components/SleepLog'
 import { SciencePanel } from './components/SciencePanel'
 import { SyncPanel } from './components/SyncPanel'
@@ -51,9 +49,7 @@ function App() {
   const [dismissForgotLog, setDismissForgotLog] = useState(false)
   const [showFeedingPrompt, setShowFeedingPrompt] = useState(false)
   const [feedingPromptTarget, setFeedingPromptTarget] = useState<'session' | 'nightWake'>('session')
-  const [nightWakeTimePrompt, setNightWakeTimePrompt] = useState<NightWakeTimePromptKind | null>(
-    null,
-  )
+  const [logTimePrompt, setLogTimePrompt] = useState<LogTimePromptKind | null>(null)
   const { preference, isDark, setTheme } = useTheme()
   const pwa = usePwaUpdate()
 
@@ -143,8 +139,8 @@ function App() {
     completeOnboarding()
   }
 
-  const handleEndSleep = () => {
-    endSleep()
+  const handleEndSleep = (endIso: string) => {
+    endSleep(endIso)
     setFeedingPromptTarget('session')
     setShowFeedingPrompt(true)
     setDismissForgotLog(false)
@@ -158,12 +154,49 @@ function App() {
 
   const nightWakeMode = Boolean(status.activeNightWake)
 
-  const nightWakePromptMin =
-    nightWakeTimePrompt === 'start' && status.openNightSession
-      ? parseISO(status.openNightSession.start)
-      : nightWakeTimePrompt === 'end' && status.activeNightWake
-        ? parseISO(status.activeNightWake.start)
-        : null
+  const logPromptMinTime = (() => {
+    if (!logTimePrompt) return null
+    switch (logTimePrompt) {
+      case 'start-nap':
+      case 'start-bedtime':
+        return defaultMinTimeForLog(logTimePrompt, now)
+      case 'wake-nap':
+      case 'wake-morning':
+        return status.currentSession ? parseISO(status.currentSession.start) : null
+      case 'night-wake-start':
+        return status.openNightSession ? parseISO(status.openNightSession.start) : null
+      case 'night-wake-end':
+        return status.activeNightWake ? parseISO(status.activeNightWake.start) : null
+      default:
+        return null
+    }
+  })()
+
+  const confirmLogTime = (iso: string) => {
+    const kind = logTimePrompt
+    setLogTimePrompt(null)
+    if (!kind) return
+    switch (kind) {
+      case 'start-nap':
+        startSleep('nap', iso)
+        break
+      case 'start-bedtime':
+        startSleep('night', iso)
+        break
+      case 'wake-nap':
+        handleEndSleep(iso)
+        break
+      case 'wake-morning':
+        handleEndSleep(iso)
+        break
+      case 'night-wake-start':
+        startNightWake(iso)
+        break
+      case 'night-wake-end':
+        handleEndNightWake(iso)
+        break
+    }
+  }
 
   return (
     <AppShell
@@ -243,30 +276,25 @@ function App() {
                 formatDuration={formatDuration}
                 nightStats={nightWakeStats}
               />
-              {nightWakeTimePrompt && nightWakePromptMin && (
-                <NightWakeTimePrompt
-                  kind={nightWakeTimePrompt}
+              {logTimePrompt && logPromptMinTime && (
+                <LogTimePrompt
+                  kind={logTimePrompt}
                   now={now}
-                  minTime={nightWakePromptMin}
+                  minTime={logPromptMinTime}
                   maxTime={now}
-                  onConfirm={(iso) => {
-                    setNightWakeTimePrompt(null)
-                    if (nightWakeTimePrompt === 'start') {
-                      startNightWake(iso)
-                    } else {
-                      handleEndNightWake(iso)
-                    }
-                  }}
-                  onCancel={() => setNightWakeTimePrompt(null)}
+                  onConfirm={confirmLogTime}
+                  onCancel={() => setLogTimePrompt(null)}
                 />
               )}
-              {!nightWakeTimePrompt && (
+              {!logTimePrompt && (
                 <ActionButtons
                   status={status}
-                  onStart={startSleep}
-                  onEnd={handleEndSleep}
-                  onStartNightWake={() => setNightWakeTimePrompt('start')}
-                  onEndNightWake={() => setNightWakeTimePrompt('end')}
+                  onStartNap={() => setLogTimePrompt('start-nap')}
+                  onStartBedtime={() => setLogTimePrompt('start-bedtime')}
+                  onWakeUp={() => setLogTimePrompt('wake-nap')}
+                  onMorningWake={() => setLogTimePrompt('wake-morning')}
+                  onStartNightWake={() => setLogTimePrompt('night-wake-start')}
+                  onEndNightWake={() => setLogTimePrompt('night-wake-end')}
                 />
               )}
               {nightWakeStats && (status.activeNightWake || status.openNightSession) && (

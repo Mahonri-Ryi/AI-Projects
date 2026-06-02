@@ -3,8 +3,8 @@ import { clearAppActionFromUrl, parseAppAction } from '../lib/appActions'
 import type { SleepKind } from '../types'
 
 interface Handlers {
-  startSleep: (kind: SleepKind) => void
-  endSleep: () => void
+  startSleep: (kind: SleepKind, startIso: string) => void
+  endSleep: (endIso: string) => void
 }
 
 export function useAppActions(handlers: Handlers) {
@@ -19,9 +19,10 @@ export function useAppActions(handlers: Handlers) {
     if (!action) return
 
     const { startSleep, endSleep } = handlersRef.current
-    if (action === 'start-nap') startSleep('nap')
-    if (action === 'start-bed') startSleep('night')
-    if (action === 'wake') endSleep()
+    const now = new Date().toISOString()
+    if (action === 'start-nap') startSleep('nap', now)
+    if (action === 'start-bed') startSleep('night', now)
+    if (action === 'wake') endSleep(now)
 
     clearAppActionFromUrl()
   }, [])
