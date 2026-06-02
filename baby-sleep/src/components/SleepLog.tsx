@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { format, parseISO } from 'date-fns'
-import { FEEDING_TAG_LABELS, type FeedingTag, type SleepSession } from '../types'
+import { differenceInMinutes, format, parseISO } from 'date-fns'
+import { FEEDING_TAG_LABELS, type FeedingTag, type NightWake, type SleepSession } from '../types'
 import { formatDuration } from '../lib/sleepLogic'
+import { wakesForNightSession } from '../lib/nightWake'
 import { Card } from './ui/Card'
 import { buildManualSessionDraft } from '../lib/sessionDraft'
 import { SessionEditor } from './SessionEditor'
@@ -10,6 +11,7 @@ const CREATE_ID = '__create__'
 
 interface Props {
   sessions: SleepSession[]
+  nightWakes: NightWake[]
   childId: string
   hasOpenSession: boolean
   onAdd: (patch: Omit<SleepSession, 'id' | 'childId'>) => boolean
@@ -18,6 +20,7 @@ interface Props {
     patch: Partial<Pick<SleepSession, 'kind' | 'start' | 'end' | 'feedingTags'>>,
   ) => void
   onDelete: (id: string) => void
+  onDeleteNightWake: (id: string) => void
 }
 
 function sessionMinutes(s: SleepSession): number | null {
@@ -27,13 +30,20 @@ function sessionMinutes(s: SleepSession): number | null {
   )
 }
 
+function nightWakeMinutes(w: NightWake): number | null {
+  if (!w.end) return null
+  return differenceInMinutes(parseISO(w.end), parseISO(w.start))
+}
+
 export function SleepLog({
   sessions,
+  nightWakes,
   childId,
   hasOpenSession,
   onAdd,
   onUpdate,
   onDelete,
+  onDeleteNightWake,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [addError, setAddError] = useState('')
@@ -119,6 +129,8 @@ export function SleepLog({
       <ul className="log-table">
         {sessions.map((s) => {
           const dur = sessionMinutes(s)
+          const wakes =
+            s.kind === 'night' ? wakesForNightSession(nightWakes, s.id) : []
           return (
             <li key={s.id} className="log-row">
               <div>
@@ -138,6 +150,31 @@ export function SleepLog({
                       </span>
                     ))}
                   </div>
+                )}
+                {wakes.length > 0 && (
+                  <ul className="log-night-wakes">
+                    {wakes.map((w) => {
+                      const wDur = nightWakeMinutes(w)
+                      return (
+                        <li key={w.id} className="log-night-wake-row">
+                          <span className="badge badge--muted">night wake</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {format(parseISO(w.start), 'h:mm a')}
+                            {w.end ? ` – ${format(parseISO(w.end), 'h:mm a')}` : ' · in progress'}
+                            {wDur != null ? ` · ${formatDuration(wDur)}` : ''}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            aria-label="Remove night wake"
+                            onClick={() => onDeleteNightWake(w.id)}
+                          >
+                            ×
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

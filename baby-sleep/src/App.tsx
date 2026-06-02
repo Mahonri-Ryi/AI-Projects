@@ -14,6 +14,8 @@ import { AppUpdateCard } from './components/AppUpdateCard'
 import { UpdateBanner } from './components/UpdateBanner'
 import { usePwaUpdate } from './hooks/usePwaUpdate'
 import { ActionButtons } from './components/ActionButtons'
+import { NightWakeCard } from './components/NightWakeCard'
+import { NightWakeInsightsCard } from './components/NightWakeInsightsCard'
 import { SleepLog } from './components/SleepLog'
 import { SciencePanel } from './components/SciencePanel'
 import { SyncPanel } from './components/SyncPanel'
@@ -43,6 +45,7 @@ function App() {
   const [settingsAddChild, setSettingsAddChild] = useState(false)
   const [dismissForgotLog, setDismissForgotLog] = useState(false)
   const [showFeedingPrompt, setShowFeedingPrompt] = useState(false)
+  const [feedingPromptTarget, setFeedingPromptTarget] = useState<'session' | 'nightWake'>('session')
   const { preference, isDark, setTheme } = useTheme()
   const pwa = usePwaUpdate()
 
@@ -52,6 +55,9 @@ function App() {
     childSessions,
     childMarkers,
     status,
+    nightWakeStats,
+    suppressNapGuidance,
+    childNightWakes,
     prediction,
     bedtimePrediction,
     nightStartedToday,
@@ -81,7 +87,11 @@ function App() {
     removeChild,
     startSleep,
     endSleep,
+    startNightWake,
+    endNightWake,
     setLastSessionFeeding,
+    setLastNightWakeFeeding,
+    deleteNightWake,
     addSession,
     updateSession,
     deleteSession,
@@ -101,9 +111,11 @@ function App() {
 
   const displayName = activeChild?.name || 'Baby'
 
-  const statusPill = status.isAsleep
-    ? { label: 'Sleeping', variant: 'asleep' as const }
-    : { label: 'Awake', variant: 'awake' as const }
+  const statusPill = status.activeNightWake
+    ? { label: 'Night wake', variant: 'awake' as const }
+    : status.isAsleep
+      ? { label: 'Sleeping', variant: 'asleep' as const }
+      : { label: 'Awake', variant: 'awake' as const }
 
   const goAddChild = () => {
     setTab('settings')
@@ -125,9 +137,18 @@ function App() {
 
   const handleEndSleep = () => {
     endSleep()
+    setFeedingPromptTarget('session')
     setShowFeedingPrompt(true)
     setDismissForgotLog(false)
   }
+
+  const handleEndNightWake = () => {
+    endNightWake()
+    setFeedingPromptTarget('nightWake')
+    setShowFeedingPrompt(true)
+  }
+
+  const nightWakeMode = Boolean(status.activeNightWake)
 
   return (
     <AppShell
@@ -178,7 +199,7 @@ function App() {
           )}
 
           {tab === 'home' && (
-            <>
+            <div className={nightWakeMode ? 'home--night-wake' : undefined}>
               <DashboardGlance glance={glance} />
               <LoggingStreakChip streak={loggingStreak} />
               {forgotToLog && !dismissForgotLog && !status.isAsleep && (
@@ -190,7 +211,11 @@ function App() {
               {showFeedingPrompt && !status.isAsleep && (
                 <WakeFeedingPrompt
                   onSelect={(tags) => {
-                    setLastSessionFeeding(tags)
+                    if (feedingPromptTarget === 'nightWake') {
+                      setLastNightWakeFeeding(tags)
+                    } else {
+                      setLastSessionFeeding(tags)
+                    }
                     setShowFeedingPrompt(false)
                   }}
                   onSkip={() => setShowFeedingPrompt(false)}
@@ -202,7 +227,16 @@ function App() {
                 asleepMinutes={asleepMinutes}
                 formatDuration={formatDuration}
               />
-              <ActionButtons status={status} onStart={startSleep} onEnd={handleEndSleep} />
+              <ActionButtons
+                status={status}
+                onStart={startSleep}
+                onEnd={handleEndSleep}
+                onStartNightWake={startNightWake}
+                onEndNightWake={handleEndNightWake}
+              />
+              {nightWakeStats && (status.activeNightWake || status.openNightSession) && (
+                <NightWakeCard stats={nightWakeStats} now={now} />
+              )}
               <WindDownChecklistCard
                 checklist={checklist}
                 onToggle={toggleChecklist}
@@ -211,14 +245,16 @@ function App() {
               />
               <DashboardStats sessions={childSessions} guidance={guidance} now={now} />
               <SleepHintsCard hints={sleepHints} />
-              {napTransition && <NapTransitionCard tip={napTransition} />}
-              <NextNapCard
-                prediction={prediction}
-                guidance={guidance}
-                status={status}
-                awakeMinutes={awakeMinutes}
-                now={now}
-              />
+              {napTransition && !suppressNapGuidance && <NapTransitionCard tip={napTransition} />}
+              {!suppressNapGuidance && (
+                <NextNapCard
+                  prediction={prediction}
+                  guidance={guidance}
+                  status={status}
+                  awakeMinutes={awakeMinutes}
+                  now={now}
+                />
+              )}
               <NextBedtimeCard
                 prediction={bedtimePrediction}
                 status={status}
@@ -235,7 +271,7 @@ function App() {
                   <ResearchLinks sources={getSources(SOURCES_TOTAL_SLEEP)} compact />
                 </div>
               )}
-            </>
+            </div>
           )}
 
           {tab === 'insights' && (
@@ -247,6 +283,13 @@ function App() {
                 onClear={clearDayMarker}
                 now={now}
               />
+              {activeChild && (
+                <NightWakeInsightsCard
+                  nightWakes={childNightWakes}
+                  childId={activeChild.id}
+                  now={now}
+                />
+              )}
               <InsightsDashboard sessions={childSessions} guidance={guidance} now={now} />
             </>
           )}
@@ -264,11 +307,13 @@ function App() {
           {tab === 'history' && activeChild && (
             <SleepLog
               sessions={recentSessions}
+              nightWakes={childNightWakes}
               childId={activeChild.id}
-              hasOpenSession={status.isAsleep}
+              hasOpenSession={childSessions.some((s) => s.end === null)}
               onAdd={addSession}
               onUpdate={updateSession}
               onDelete={deleteSession}
+              onDeleteNightWake={deleteNightWake}
             />
           )}
 

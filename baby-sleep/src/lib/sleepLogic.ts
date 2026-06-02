@@ -44,6 +44,8 @@ export function getSleepStatus(sessions: SleepSession[]): SleepStatus {
       lastEndedSession: lastEnded ?? null,
       awakeSince: null,
       asleepSince: parseISO(open.start),
+      openNightSession: open.kind === 'night' ? open : null,
+      activeNightWake: null,
     }
   }
 
@@ -54,6 +56,8 @@ export function getSleepStatus(sessions: SleepSession[]): SleepStatus {
     lastEndedSession: lastEnded ?? null,
     awakeSince,
     asleepSince: null,
+    openNightSession: null,
+    activeNightWake: null,
   }
 }
 

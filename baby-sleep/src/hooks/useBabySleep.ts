@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getWakeWindowGuidance, getAgeInMonths, formatAge } from '../data/sleepScience'
 import {
-  getSleepStatus,
   predictNextNap,
   predictNextBedtime,
   eveningBedtimeLoggedToday,
@@ -9,6 +8,12 @@ import {
   formatDuration,
   DEFAULT_REMINDER_SETTINGS,
 } from '../lib/sleepLogic'
+import {
+  cloneNightWakes,
+  getNightWakeStats,
+  resolveSleepStatus,
+  shouldSuppressNapGuidance,
+} from '../lib/nightWake'
 import { parseISO } from 'date-fns'
 import { useSleepReminders } from './useSleepReminders'
 import { createDefaultChild, normalizeState, pickChildColor } from '../lib/migrate'
@@ -36,6 +41,7 @@ import type {
   DayMarkerTag,
   FeedingTag,
   ReminderSettings,
+  NightWake,
   SleepKind,
   SleepSession,
   UndoOffer,
@@ -100,7 +106,25 @@ export function useBabySleep() {
     [childMarkers, state.activeChildId, now],
   )
 
-  const status = useMemo(() => getSleepStatus(childSessions), [childSessions])
+  const childNightWakes = useMemo(
+    () => (state.nightWakes ?? []).filter((w) => w.childId === state.activeChildId),
+    [state.nightWakes, state.activeChildId],
+  )
+
+  const status = useMemo(
+    () => resolveSleepStatus(childSessions, state.nightWakes ?? [], state.activeChildId),
+    [childSessions, state.nightWakes, state.activeChildId],
+  )
+
+  const nightWakeStats = useMemo(
+    () => getNightWakeStats(childSessions, state.nightWakes ?? [], state.activeChildId, now),
+    [childSessions, state.nightWakes, state.activeChildId, now],
+  )
+
+  const suppressNapGuidance = useMemo(
+    () => shouldSuppressNapGuidance(status, now),
+    [status, now],
+  )
 
   const routine = activeChild?.routine
 
@@ -183,9 +207,10 @@ export function useBabySleep() {
   )
 
   const forgotToLog = useMemo(() => {
+    if (suppressNapGuidance || status.activeNightWake) return null
     const maxWake = guidance?.maxMinutes ?? 120
     return getForgotToLogPrompt(childSessions, maxWake + 30, now)
-  }, [childSessions, guidance, now])
+  }, [childSessions, guidance, now, suppressNapGuidance, status.activeNightWake])
 
   const napTransition = useMemo(
     () => (activeChild?.birthDate ? getNapTransitionTips(activeChild.birthDate, now) : null),
@@ -197,13 +222,17 @@ export function useBabySleep() {
     [state.checklist, now],
   )
 
-  const offerUndo = useCallback((sessions: SleepSession[], label: string) => {
-    setUndo({
-      label,
-      expiresAt: Date.now() + UNDO_MS,
-      sessionsSnapshot: cloneSessions(sessions),
-    })
-  }, [])
+  const offerUndo = useCallback(
+    (sessions: SleepSession[], nightWakes: NightWake[], label: string) => {
+      setUndo({
+        label,
+        expiresAt: Date.now() + UNDO_MS,
+        sessionsSnapshot: cloneSessions(sessions),
+        nightWakesSnapshot: cloneNightWakes(nightWakes),
+      })
+    },
+    [],
+  )
 
   const setActiveChild = useCallback((childId: string) => {
     setState((s) => ({ ...s, activeChildId: childId }))
@@ -253,8 +282,9 @@ export function useBabySleep() {
           ...s,
           children: [fresh],
           activeChildId: fresh.id,
-          sessions: s.sessions.filter((x) => x.childId !== childId),
-          dayMarkers: (s.dayMarkers ?? []).filter((m) => m.childId !== childId),
+        sessions: s.sessions.filter((x) => x.childId !== childId),
+        nightWakes: (s.nightWakes ?? []).filter((w) => w.childId !== childId),
+        dayMarkers: (s.dayMarkers ?? []).filter((m) => m.childId !== childId),
         }
       }
       const activeChildId =
@@ -264,6 +294,7 @@ export function useBabySleep() {
         children,
         activeChildId,
         sessions: s.sessions.filter((x) => x.childId !== childId),
+        nightWakes: (s.nightWakes ?? []).filter((w) => w.childId !== childId),
         dayMarkers: (s.dayMarkers ?? []).filter((m) => m.childId !== childId),
       }
     })
@@ -274,7 +305,11 @@ export function useBabySleep() {
       setState((s) => {
         const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
         if (open) return s
-        offerUndo(s.sessions, kind === 'nap' ? 'Started nap' : 'Started bedtime')
+        offerUndo(
+          s.sessions,
+          s.nightWakes ?? [],
+          kind === 'nap' ? 'Started nap' : 'Started bedtime',
+        )
         return {
           ...s,
           sessions: [
@@ -297,14 +332,79 @@ export function useBabySleep() {
     setState((s) => {
       const open = s.sessions.find((x) => x.childId === s.activeChildId && x.end === null)
       if (!open) return s
-      offerUndo(s.sessions, 'Wake up')
+      offerUndo(s.sessions, s.nightWakes ?? [], 'Wake up')
       const end = new Date().toISOString()
+      const wakes = (s.nightWakes ?? []).map((w) =>
+        w.childId === s.activeChildId && w.end === null ? { ...w, end } : w,
+      )
       return {
         ...s,
+        nightWakes: wakes,
         sessions: s.sessions.map((x) => (x.id === open.id ? { ...x, end } : x)),
       }
     })
   }, [offerUndo])
+
+  const startNightWake = useCallback(() => {
+    setState((s) => {
+      const openNight = s.sessions.find(
+        (x) =>
+          x.childId === s.activeChildId && x.kind === 'night' && x.end === null,
+      )
+      if (!openNight) return s
+      const existing = (s.nightWakes ?? []).find(
+        (w) => w.childId === s.activeChildId && w.end === null,
+      )
+      if (existing) return s
+      offerUndo(s.sessions, s.nightWakes ?? [], 'Night wake started')
+      return {
+        ...s,
+        nightWakes: [
+          ...(s.nightWakes ?? []),
+          {
+            id: generateId(),
+            childId: s.activeChildId,
+            nightSessionId: openNight.id,
+            start: new Date().toISOString(),
+            end: null,
+          },
+        ],
+      }
+    })
+  }, [offerUndo])
+
+  const endNightWake = useCallback(() => {
+    setState((s) => {
+      const active = (s.nightWakes ?? []).find(
+        (w) => w.childId === s.activeChildId && w.end === null,
+      )
+      if (!active) return s
+      offerUndo(s.sessions, s.nightWakes ?? [], 'Back to sleep')
+      const end = new Date().toISOString()
+      return {
+        ...s,
+        nightWakes: (s.nightWakes ?? []).map((w) =>
+          w.id === active.id ? { ...w, end } : w,
+        ),
+      }
+    })
+  }, [offerUndo])
+
+  const setLastNightWakeFeeding = useCallback((tags: FeedingTag[]) => {
+    setState((s) => {
+      const sorted = [...(s.nightWakes ?? [])]
+        .filter((w) => w.childId === s.activeChildId && w.end)
+        .sort((a, b) => parseISO(b.end!).getTime() - parseISO(a.end!).getTime())
+      const last = sorted[0]
+      if (!last) return s
+      return {
+        ...s,
+        nightWakes: (s.nightWakes ?? []).map((w) =>
+          w.id === last.id ? { ...w, feedingTags: tags.length ? tags : undefined } : w,
+        ),
+      }
+    })
+  }, [])
 
   const setLastSessionFeeding = useCallback((tags: FeedingTag[]) => {
     setState((s) => {
@@ -334,7 +434,7 @@ export function useBabySleep() {
           return s
         }
         added = true
-        offerUndo(s.sessions, 'Added session')
+        offerUndo(s.sessions, s.nightWakes ?? [], 'Added session')
         return {
           ...s,
           sessions: [
@@ -368,10 +468,24 @@ export function useBabySleep() {
   const deleteSession = useCallback(
     (id: string) => {
       setState((s) => {
-        offerUndo(s.sessions, 'Removed session')
+        offerUndo(s.sessions, s.nightWakes ?? [], 'Removed session')
         return {
           ...s,
           sessions: s.sessions.filter((x) => x.id !== id),
+          nightWakes: (s.nightWakes ?? []).filter((w) => w.nightSessionId !== id),
+        }
+      })
+    },
+    [offerUndo],
+  )
+
+  const deleteNightWake = useCallback(
+    (id: string) => {
+      setState((s) => {
+        offerUndo(s.sessions, s.nightWakes ?? [], 'Removed night wake')
+        return {
+          ...s,
+          nightWakes: (s.nightWakes ?? []).filter((w) => w.id !== id),
         }
       })
     },
@@ -408,7 +522,11 @@ export function useBabySleep() {
 
   const undoLastAction = useCallback(() => {
     if (!undo || Date.now() > undo.expiresAt) return
-    setState((s) => ({ ...s, sessions: cloneSessions(undo.sessionsSnapshot) }))
+    setState((s) => ({
+      ...s,
+      sessions: cloneSessions(undo.sessionsSnapshot),
+      nightWakes: cloneNightWakes(undo.nightWakesSnapshot),
+    }))
     setUndo(null)
   }, [undo])
 
@@ -454,6 +572,9 @@ export function useBabySleep() {
     childMarkers,
     travelMode,
     status,
+    nightWakeStats,
+    suppressNapGuidance,
+    childNightWakes,
     prediction,
     bedtimePrediction,
     nightStartedToday,
@@ -483,10 +604,14 @@ export function useBabySleep() {
     removeChild,
     startSleep,
     endSleep,
+    startNightWake,
+    endNightWake,
     setLastSessionFeeding,
+    setLastNightWakeFeeding,
     addSession,
     updateSession,
     deleteSession,
+    deleteNightWake,
     setDayMarker,
     clearDayMarker,
     completeOnboarding,

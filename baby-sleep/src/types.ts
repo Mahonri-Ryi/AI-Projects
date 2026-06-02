@@ -52,6 +52,17 @@ export interface SleepSession {
   feedingTags?: FeedingTag[]
 }
 
+/** Awake period during an ongoing night sleep (feed / resettle). */
+export interface NightWake {
+  id: string
+  childId: string
+  nightSessionId: string
+  start: string // ISO
+  end: string | null
+  feedingTags?: FeedingTag[]
+  note?: string
+}
+
 export interface DayMarker {
   id: string
   childId: string
@@ -90,6 +101,7 @@ export interface AppState {
   children: ChildProfile[]
   activeChildId: string
   sessions: SleepSession[]
+  nightWakes?: NightWake[]
   householdCode: string
   reminders?: ReminderSettings
   dayMarkers?: DayMarker[]
@@ -102,6 +114,7 @@ export interface UndoOffer {
   label: string
   expiresAt: number
   sessionsSnapshot: SleepSession[]
+  nightWakesSnapshot: NightWake[]
 }
 
 export interface LoggingStreak {
@@ -180,6 +193,17 @@ export interface SleepStatus {
   lastEndedSession: SleepSession | null
   awakeSince: Date | null
   asleepSince: Date | null
+  /** Open night session (end null) even while up for a night wake */
+  openNightSession: SleepSession | null
+  activeNightWake: NightWake | null
+}
+
+export interface NightWakeStats {
+  wakesTonight: number
+  totalAwakeTonightMinutes: number
+  currentWakeMinutes: number
+  typicalResettleMinutes: number | null
+  aimResettleBy: Date | null
 }
 
 export interface GlanceSummary {

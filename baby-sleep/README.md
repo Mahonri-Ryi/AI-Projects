@@ -5,6 +5,7 @@ A mobile-friendly PWA to log naps and bedtime, with **research-based next-nap an
 ## Features
 
 - One-tap **nap** and **bedtime** logging
+- **Night wake** tracking — log feed/resettle breaks without ending the night (awake timer, total awake tonight, typical resettle time)
 - **Next nap window** from age-appropriate wake times (homeostatic sleep pressure + published ranges)
 - **Bedtime window** from age guidance plus your logged bedtime history when available
 - Optional **browser reminders** before nap and bedtime wind-down (Settings)
