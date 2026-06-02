@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/AI-Projects/baby-sleep/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="description" content="Track your baby's sleep with research-based next-nap and bedtime guidance plus optional reminders." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Little Dream — Baby Sleep Intelligence</title>
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('little-dream-theme');
+          var dark =
+            pref === 'dark' ||
+            (pref !== 'light' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/AI-Projects/baby-sleep/assets/index-DG3j2r2L.js"></script>
+    <link rel="stylesheet" crossorigin href="/AI-Projects/baby-sleep/assets/index-dA2EVpKN.css">
+  <link rel="manifest" href="/AI-Projects/baby-sleep/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
