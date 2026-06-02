@@ -55,8 +55,9 @@ export function NightWakeCard({ stats, now }: Props) {
       )}
 
       <p className="prose" style={{ fontSize: '0.85rem', marginTop: '0.75rem' }}>
-        Tap <strong>Back to sleep</strong> when she&apos;s down again. Use <strong>Wake up</strong> only for
-        morning.
+        Tap <strong>Up for feed</strong> or <strong>Back to sleep</strong> to log the time — choose{' '}
+        <strong>Use now</strong> or set the actual time if you&apos;re catching up later. Use{' '}
+        <strong>Wake up (morning)</strong> only when the night is over.
       </p>
     </Card>
   )

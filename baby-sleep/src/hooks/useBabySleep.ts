@@ -345,50 +345,57 @@ export function useBabySleep() {
     })
   }, [offerUndo])
 
-  const startNightWake = useCallback(() => {
-    setState((s) => {
-      const openNight = s.sessions.find(
-        (x) =>
-          x.childId === s.activeChildId && x.kind === 'night' && x.end === null,
-      )
-      if (!openNight) return s
-      const existing = (s.nightWakes ?? []).find(
-        (w) => w.childId === s.activeChildId && w.end === null,
-      )
-      if (existing) return s
-      offerUndo(s.sessions, s.nightWakes ?? [], 'Night wake started')
-      return {
-        ...s,
-        nightWakes: [
-          ...(s.nightWakes ?? []),
-          {
-            id: generateId(),
-            childId: s.activeChildId,
-            nightSessionId: openNight.id,
-            start: new Date().toISOString(),
-            end: null,
-          },
-        ],
-      }
-    })
-  }, [offerUndo])
+  const startNightWake = useCallback(
+    (startIso: string) => {
+      setState((s) => {
+        const openNight = s.sessions.find(
+          (x) =>
+            x.childId === s.activeChildId && x.kind === 'night' && x.end === null,
+        )
+        if (!openNight) return s
+        const existing = (s.nightWakes ?? []).find(
+          (w) => w.childId === s.activeChildId && w.end === null,
+        )
+        if (existing) return s
+        if (parseISO(startIso).getTime() < parseISO(openNight.start).getTime()) return s
+        offerUndo(s.sessions, s.nightWakes ?? [], 'Night wake started')
+        return {
+          ...s,
+          nightWakes: [
+            ...(s.nightWakes ?? []),
+            {
+              id: generateId(),
+              childId: s.activeChildId,
+              nightSessionId: openNight.id,
+              start: startIso,
+              end: null,
+            },
+          ],
+        }
+      })
+    },
+    [offerUndo],
+  )
 
-  const endNightWake = useCallback(() => {
-    setState((s) => {
-      const active = (s.nightWakes ?? []).find(
-        (w) => w.childId === s.activeChildId && w.end === null,
-      )
-      if (!active) return s
-      offerUndo(s.sessions, s.nightWakes ?? [], 'Back to sleep')
-      const end = new Date().toISOString()
-      return {
-        ...s,
-        nightWakes: (s.nightWakes ?? []).map((w) =>
-          w.id === active.id ? { ...w, end } : w,
-        ),
-      }
-    })
-  }, [offerUndo])
+  const endNightWake = useCallback(
+    (endIso: string) => {
+      setState((s) => {
+        const active = (s.nightWakes ?? []).find(
+          (w) => w.childId === s.activeChildId && w.end === null,
+        )
+        if (!active) return s
+        if (parseISO(endIso).getTime() < parseISO(active.start).getTime()) return s
+        offerUndo(s.sessions, s.nightWakes ?? [], 'Back to sleep')
+        return {
+          ...s,
+          nightWakes: (s.nightWakes ?? []).map((w) =>
+            w.id === active.id ? { ...w, end: endIso } : w,
+          ),
+        }
+      })
+    },
+    [offerUndo],
+  )
 
   const setLastNightWakeFeeding = useCallback((tags: FeedingTag[]) => {
     setState((s) => {
