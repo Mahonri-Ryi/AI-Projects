@@ -1,18 +1,22 @@
 import { IconMoon, IconSun } from './icons'
-import type { SleepStatus, SleepKind } from '../types'
+import type { SleepStatus } from '../types'
 
 interface Props {
   status: SleepStatus
-  onStart: (kind: SleepKind) => void
-  onEnd: () => void
+  onStartNap: () => void
+  onStartBedtime: () => void
+  onWakeUp: () => void
+  onMorningWake: () => void
   onStartNightWake: () => void
   onEndNightWake: () => void
 }
 
 export function ActionButtons({
   status,
-  onStart,
-  onEnd,
+  onStartNap,
+  onStartBedtime,
+  onWakeUp,
+  onMorningWake,
   onStartNightWake,
   onEndNightWake,
 }: Props) {
@@ -33,7 +37,7 @@ export function ActionButtons({
         <button
           type="button"
           className="btn btn--ghost"
-          onClick={onEnd}
+          onClick={onMorningWake}
           aria-label="Morning wake up"
         >
           <IconSun size={18} aria-hidden />
@@ -58,7 +62,7 @@ export function ActionButtons({
         <button
           type="button"
           className="btn btn--ghost"
-          onClick={onEnd}
+          onClick={onMorningWake}
           aria-label="Morning wake up"
         >
           Wake up (morning)
@@ -70,7 +74,7 @@ export function ActionButtons({
   if (status.isAsleep) {
     return (
       <div className="action-bar action-bar--primary" role="group" aria-label="Sleep actions">
-        <button type="button" className="btn btn--primary" onClick={onEnd} aria-label="Mark baby awake">
+        <button type="button" className="btn btn--primary" onClick={onWakeUp} aria-label="Mark baby awake">
           <IconSun size={20} aria-hidden />
           Wake up
         </button>
@@ -83,7 +87,7 @@ export function ActionButtons({
       <button
         type="button"
         className="btn btn--nap"
-        onClick={() => onStart('nap')}
+        onClick={onStartNap}
         aria-label="Start nap"
       >
         <IconSun size={18} aria-hidden />
@@ -92,7 +96,7 @@ export function ActionButtons({
       <button
         type="button"
         className="btn btn--night"
-        onClick={() => onStart('night')}
+        onClick={onStartBedtime}
         aria-label="Start bedtime"
       >
         <IconMoon size={18} aria-hidden />

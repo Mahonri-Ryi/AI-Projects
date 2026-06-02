@@ -1,4 +1,4 @@
-import type { AppState, ChildProfile, SleepSession } from '../types'
+import type { AppState, ChildProfile, NightWake, SleepSession } from '../types'
 
 export const CHILD_A: ChildProfile = {
   id: 'child-a',
@@ -13,6 +13,9 @@ export const CHILD_B: ChildProfile = {
   birthDate: '2022-01-10',
   color: '#059669',
 }
+
+/** Alias used by App / hook integration tests */
+export const TEST_CHILD_ID = CHILD_A.id
 
 export function session(
   overrides: Partial<SleepSession> & Pick<SleepSession, 'id' | 'childId' | 'kind' | 'start'>,
@@ -63,6 +66,56 @@ export function makeAppState(overrides?: Partial<AppState>): AppState {
     onboardingComplete: true,
     dayMarkers: [],
     syncMeta: { lastSyncedAt: null, lastSyncLabel: null, mergeCount: 0 },
+    nightWakes: [],
     ...overrides,
+  }
+}
+
+export function baseAppState(overrides: Partial<AppState> = {}): AppState {
+  return makeAppState({
+    sessions: [],
+    nightWakes: [],
+    children: [CHILD_A],
+    activeChildId: CHILD_A.id,
+    ...overrides,
+  })
+}
+
+export function seedOnboardedState(overrides: Partial<AppState> = {}): void {
+  localStorage.setItem('little-dream-app-v2', JSON.stringify(baseAppState(overrides)))
+}
+
+export function openNapSession(startIso: string, id = 'nap-open', childId = CHILD_A.id): SleepSession {
+  return {
+    id,
+    childId,
+    kind: 'nap',
+    start: startIso,
+    end: null,
+  }
+}
+
+export function openNightSession(startIso: string, id = 'night-open', childId = CHILD_A.id): SleepSession {
+  return {
+    id,
+    childId,
+    kind: 'night',
+    start: startIso,
+    end: null,
+  }
+}
+
+export function activeNightWake(
+  nightSessionId: string,
+  startIso: string,
+  id = 'wake-active',
+  childId = CHILD_A.id,
+): NightWake {
+  return {
+    id,
+    childId,
+    nightSessionId,
+    start: startIso,
+    end: null,
   }
 }
