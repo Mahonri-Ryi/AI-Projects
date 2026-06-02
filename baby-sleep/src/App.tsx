@@ -16,6 +16,10 @@ import { usePwaUpdate } from './hooks/usePwaUpdate'
 import { ActionButtons } from './components/ActionButtons'
 import { NightWakeCard } from './components/NightWakeCard'
 import { NightWakeInsightsCard } from './components/NightWakeInsightsCard'
+import {
+  NightWakeTimePrompt,
+  type NightWakeTimePromptKind,
+} from './components/NightWakeTimePrompt'
 import { SleepLog } from './components/SleepLog'
 import { SciencePanel } from './components/SciencePanel'
 import { SyncPanel } from './components/SyncPanel'
@@ -38,6 +42,7 @@ import { NapTransitionCard } from './components/NapTransitionCard'
 import { WakeFeedingPrompt } from './components/WakeFeedingPrompt'
 import { AndroidShortcutsCard } from './components/AndroidShortcutsCard'
 import { SleepCoachTab } from './components/SleepCoachTab'
+import { parseISO } from 'date-fns'
 import { getSources, SOURCES_TOTAL_SLEEP } from './data/researchCatalog'
 
 function App() {
@@ -46,6 +51,9 @@ function App() {
   const [dismissForgotLog, setDismissForgotLog] = useState(false)
   const [showFeedingPrompt, setShowFeedingPrompt] = useState(false)
   const [feedingPromptTarget, setFeedingPromptTarget] = useState<'session' | 'nightWake'>('session')
+  const [nightWakeTimePrompt, setNightWakeTimePrompt] = useState<NightWakeTimePromptKind | null>(
+    null,
+  )
   const { preference, isDark, setTheme } = useTheme()
   const pwa = usePwaUpdate()
 
@@ -142,13 +150,20 @@ function App() {
     setDismissForgotLog(false)
   }
 
-  const handleEndNightWake = () => {
-    endNightWake()
+  const handleEndNightWake = (endIso: string) => {
+    endNightWake(endIso)
     setFeedingPromptTarget('nightWake')
     setShowFeedingPrompt(true)
   }
 
   const nightWakeMode = Boolean(status.activeNightWake)
+
+  const nightWakePromptMin =
+    nightWakeTimePrompt === 'start' && status.openNightSession
+      ? parseISO(status.openNightSession.start)
+      : nightWakeTimePrompt === 'end' && status.activeNightWake
+        ? parseISO(status.activeNightWake.start)
+        : null
 
   return (
     <AppShell
@@ -228,13 +243,32 @@ function App() {
                 formatDuration={formatDuration}
                 nightStats={nightWakeStats}
               />
-              <ActionButtons
-                status={status}
-                onStart={startSleep}
-                onEnd={handleEndSleep}
-                onStartNightWake={startNightWake}
-                onEndNightWake={handleEndNightWake}
-              />
+              {nightWakeTimePrompt && nightWakePromptMin && (
+                <NightWakeTimePrompt
+                  kind={nightWakeTimePrompt}
+                  now={now}
+                  minTime={nightWakePromptMin}
+                  maxTime={now}
+                  onConfirm={(iso) => {
+                    setNightWakeTimePrompt(null)
+                    if (nightWakeTimePrompt === 'start') {
+                      startNightWake(iso)
+                    } else {
+                      handleEndNightWake(iso)
+                    }
+                  }}
+                  onCancel={() => setNightWakeTimePrompt(null)}
+                />
+              )}
+              {!nightWakeTimePrompt && (
+                <ActionButtons
+                  status={status}
+                  onStart={startSleep}
+                  onEnd={handleEndSleep}
+                  onStartNightWake={() => setNightWakeTimePrompt('start')}
+                  onEndNightWake={() => setNightWakeTimePrompt('end')}
+                />
+              )}
               {nightWakeStats && (status.activeNightWake || status.openNightSession) && (
                 <NightWakeCard stats={nightWakeStats} now={now} />
               )}
